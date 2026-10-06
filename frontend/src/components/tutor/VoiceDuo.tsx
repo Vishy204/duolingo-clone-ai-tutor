@@ -104,6 +104,9 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
           },
           onBotOutput: (d) => {
             const text = d.text?.trim();
+            // Each sentence arrives twice: "new" (the LLM text, with any markdown) and "completed" (the
+            // spoken, filtered copy, with a different segment id). Show only the first one.
+            if (d.spoken_status && d.spoken_status !== "new") return;
             if (!text || d.aggregated_by === "word" || turn.current.includes(text)) return;
             turn.current.push(text);
             const joined = joinSentences(turn.current);
