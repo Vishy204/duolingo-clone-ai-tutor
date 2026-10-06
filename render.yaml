@@ -3,7 +3,7 @@
 # never stored in this repo.
 services:
   - type: web
-    name: duolingo-clone-api
+    name: smartalingo-api
     runtime: docker
     rootDir: backend
     dockerfilePath: ./Dockerfile
@@ -21,7 +21,7 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: CORS_ORIGIN_REGEX
-        value: https://duolingo-clone-ai-tutor.*\.vercel\.app
+        value: https://(smartalingo|duolingo-clone-ai-tutor).*\.vercel\.app
       - key: JWT_SECRET
         generateValue: true
       - key: OPENAI_MODEL
@@ -31,6 +31,6 @@ services:
       - key: DEMO_MODE
         value: "true"
       - key: AGENT_DAILY_BUDGET
-        value: "40"
+        value: "15"
       - key: VOICE_LLM_PROVIDER
         value: cerebras

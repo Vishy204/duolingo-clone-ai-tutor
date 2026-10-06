@@ -2,8 +2,8 @@
 
 A Duolingo-style Spanish app with an AI tutor that learns from your mistakes and rewrites your practice.
 
-**Live app:** https://duolingo-clone-ai-tutor.vercel.app · **API docs:** https://duolingo-clone-api-wtpp.onrender.com/docs
-**Stack:** Next.js 16 (TypeScript) · FastAPI · SQLite · OpenAI Agents SDK · Pipecat
+**Live app:** https://smartalingo.vercel.app · **API docs:** https://smartalingo-api.onrender.com/docs
+**Repo:** https://github.com/Vishy204/smartalingo · **Stack:** Next.js 16 (TypeScript) · FastAPI · SQLite · OpenAI Agents SDK · Pipecat
 
 > The backend is on Render's free tier. If the first load hangs for 30–50s, the server is waking up.
 
@@ -97,7 +97,8 @@ flowchart LR
   outputs with zero LLM calls.
 - **Observable.** Every agent call is stored in `agent_runs` (status, latency, tokens, tool calls,
   output, trace id) and traced in the OpenAI dashboard. The "How Duo learns" tab reads from this.
-- **Safe to run in public.** One pipeline per learner at a time, a daily agent budget per learner,
+- **Safe to run in public.** One pipeline per learner at a time, a limit of 15 AI actions per learner per day
+  (tutor updates, chat messages, explanations and voice sessions; after that the rules engine takes over),
   `max_turns` and token caps, rate limits, and the LLM can never pick a user id (tools read it from
   the run context).
 

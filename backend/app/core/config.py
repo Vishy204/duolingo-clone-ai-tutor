@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(default=None, repr=False)
     openai_model: str = "gpt-5-mini"
-    agent_daily_budget: int = 40
+    agent_daily_budget: int = 15
     agent_max_turns: int = 8
 
     demo_mode: bool = True
