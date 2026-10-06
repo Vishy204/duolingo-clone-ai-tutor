@@ -21,7 +21,7 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: CORS_ORIGIN_REGEX
-        value: https://duolingo-clone.*\.vercel\.app
+        value: https://duolingo-clone-ai-tutor.*\.vercel\.app
       - key: JWT_SECRET
         generateValue: true
       - key: OPENAI_MODEL

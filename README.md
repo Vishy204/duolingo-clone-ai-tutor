@@ -18,7 +18,7 @@
 > do, and I'd rather show you that than a slightly shinier button. Everything below explains how
 > it works and how you can try to break it.
 
-**Live demo:** _see the links at the bottom_ · **Stack:** Next.js 16 (TypeScript) · FastAPI · SQLite ·
+**Live demo:** https://duolingo-clone-ai-tutor.vercel.app · **API:** https://duolingo-clone-api-wtpp.onrender.com/docs · **Stack:** Next.js 16 (TypeScript) · FastAPI · SQLite ·
 OpenAI Agents SDK · Pipecat (Deepgram + Cerebras)
 
 ---
@@ -180,8 +180,8 @@ browser mic ─ws─► Silero VAD ─► Deepgram nova-3 (language=multi: Engli
 browser speaker ◄─ws─ Deepgram Aura-2 TTS ◄─┘
 ```
 
-- **Measured about 1.4–2.3s** from the end of your sentence to Duo's voice (local test, with
-  synthetic speech streamed through the real WebSocket).
+- **Measured about 1.4–2.3s locally and ~2.8s on the deployed free-tier server**, from the end of
+  your sentence to Duo's voice (synthetic speech streamed through the real WebSocket).
 - Everything streams, so Duo starts speaking the first sentence while the LLM writes the rest.
 - The learner's profile (weak concepts, recent mistakes) is **pre-loaded into the prompt** rather
   than fetched with a tool call, so there's no extra round-trip.
@@ -417,4 +417,8 @@ render.yaml  .github/workflows/ci.yml
 
 ---
 
-**Live app:** _TBD_ · **API docs:** _TBD_/docs · **Repo:** _TBD_
+**Live app:** https://duolingo-clone-ai-tutor.vercel.app · **API docs:** https://duolingo-clone-api-wtpp.onrender.com/docs ·
+**Repo:** https://github.com/Vishy204/duolingo-clone-ai-tutor
+
+> The backend runs on Render's free tier, which sleeps when idle: if the first load spins for ~30–50s,
+> that's the server waking up. After that it's fast.
