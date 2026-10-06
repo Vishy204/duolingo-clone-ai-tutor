@@ -1,3 +1,5 @@
+import logging
+import secrets
 from functools import lru_cache
 
 from pydantic import Field
@@ -12,7 +14,8 @@ class Settings(BaseSettings):
     app_name: str = "Smartalingo API"
     database_url: str = "sqlite:///./data/app.db"
 
-    jwt_secret: str = "dev-only-insecure-secret-change-me"
+    # No baked-in default: a known secret would let anyone forge tokens if the env var were forgotten.
+    jwt_secret: str = Field(default="", repr=False)
     jwt_ttl_days: int = 30
 
     cors_origins: str = "http://localhost:3000"
@@ -44,4 +47,10 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if len(s.jwt_secret) < 32:
+        # Unset or weak: use a random per-process secret (existing tokens stop working on restart, and the
+        # frontend quietly creates a new guest). Set JWT_SECRET in production to keep sessions across restarts.
+        logging.getLogger("config").warning("JWT_SECRET missing or shorter than 32 chars; using a random secret")
+        s.jwt_secret = secrets.token_urlsafe(48)
+    return s

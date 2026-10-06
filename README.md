@@ -28,16 +28,17 @@ you to look at most closely.
 
 1. Click **Get started**. You get your own learner with a few days of history. That history
    deliberately contains a pattern: mostly *el/la* gender mistakes and missing accents.
-2. Within ~30s the tutor has analysed it. A purple **Duo's Practice** node appears on the path and the
-   right rail explains what Duo noticed.
-3. Open **Duo AI → How Duo learns**. You see the latest adaptation in four steps: *what Duo saw* (your
+2. Within ~30s the tutor has analysed it. A purple **Smarto's Practice** node appears on the path and the
+   right rail explains what Smarto noticed.
+3. Open **Smarto → How Smarto learns**. You see the latest adaptation in four steps: *what Smarto saw* (your
    mistakes by type), *what it concluded* (each weak topic, the evidence, the likely reason, and the
    exact mistakes that led there), *what it changed*, and *the exercises it wrote for you*.
-4. **Check it adapts to new behaviour.** Under *Try it: give Duo new mistakes*, pick a learner type
+4. **Check it adapts to new behaviour.** Under *Try it: give Smarto new mistakes*, pick a learner type
    ("Confuses verb forms", "Scrambles word order", "Recognises but can't produce"...). It adds ~14
    realistic wrong answers through the real grader and re-runs the agents. The steps fill in live, so
    you can check the diagnosis matches what you picked. Or play a lesson and get things wrong on purpose.
-5. **Duo AI → Talk to Duo**: ask in text or by voice, e.g. *"Is hola amigo correct?"*
+5. **Smarto → Talk to Smarto**: ask in text or by voice, e.g. *"Is hola amigo correct?"*, or ask for
+   practice on anything (*"make me a practice on animals"*). It's built in ~30s and a Start button appears in the chat.
 
 ---
 
@@ -83,7 +84,7 @@ flowchart LR
 | **Curriculum Planner** | Turns the diagnosis into a typed `PracticePlan`: which topics, how many items, and which formats (a recognition weakness gets choose/match; a production weakness gets type/translate), plus a short message to the learner. |
 | **Exercise Generator** | Writes new exercises in the app's exact format. It must call `get_course_lexicon` first and may only use words the learner has been taught. Distractors are designed to probe the misconception. |
 | **Validator** (output guardrail) | Deterministic checks on every generated item: real concepts, answer among the choices, grounding (only taught words), and the answer must grade as correct through the real grader. If too many fail, the generator gets one repair round with the errors. Gaps are filled with course exercises. |
-| **Duo (chat)** | A conversational tutor. Uses the Analyst via `.as_tool()`, a fast `get_learning_snapshot` tool, `explain_concept`, and an action tool `create_practice` that kicks off the pipeline. An input guardrail agent blocks off-topic requests and prompt injection. |
+| **Smarto (chat)** | A conversational tutor. Uses the Analyst via `.as_tool()`, a fast `get_learning_snapshot` tool, `explain_concept`, and an action tool `create_practice` that kicks off the pipeline. An input guardrail agent blocks off-topic requests and prompt injection. |
 | **Mistake Explainer** | "Why?" on a wrong answer. Gets the task, your answer, the correct answer, the error type and the rule; returns a short typed explanation (~1.5s). |
 
 ### Design decisions
@@ -93,10 +94,13 @@ flowchart LR
 - **Never trust the LLM blindly.** Plans are bounds-checked, generated exercises are validated, and one
   teaching rule lives in code: *a production weakness is trained mostly by producing*. The evals
   caught the planner drifting on this, so I enforced it instead of hoping.
+- **Practice on demand.** When you ask Smarto (chat or voice) for practice, `create_practice` starts the
+  pipeline with your topics. An explicit request is never dropped (it waits behind a running update),
+  the topics you asked for override the planner, and they may use course lessons you haven't reached yet.
 - **Always adapts.** No API key, budget used up, or an exception: a rules engine produces the same
   outputs with zero LLM calls.
 - **Observable.** Every agent call is stored in `agent_runs` (status, latency, tokens, tool calls,
-  output, trace id) and traced in the OpenAI dashboard. The "How Duo learns" tab reads from this.
+  output, trace id) and traced in the OpenAI dashboard. The "How Smarto learns" tab reads from this.
 - **Safe to run in public.** One pipeline per learner at a time, a limit of 15 AI actions per learner per day
   (tutor updates, chat messages, explanations and voice sessions; after that the rules engine takes over),
   `max_turns` and token caps, rate limits, and the LLM can never pick a user id (tools read it from
@@ -104,8 +108,8 @@ flowchart LR
 
 ### Where you see the adaptation
 
-The **Duo's Practice** node, up to 2 personalised exercises mixed into regular lessons, "practice to
-earn hearts" targeting weak topics, the insights card, and the **How Duo learns** tab.
+The **Smarto's Practice** node, up to 2 personalised exercises mixed into regular lessons, "practice to
+earn hearts" targeting weak topics, the insights card, and the **How Smarto learns** tab.
 
 ### Voice tutor
 
@@ -114,7 +118,7 @@ mic -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras L
 ```
 
 Everything streams, and the learner's weak topics are pre-loaded into the prompt instead of fetched
-with a tool, so Duo answers in about 2–4s end to end on the hosted server. Slow work is handed off:
+with a tool, so Smarto answers in about 2–4s end to end on the hosted server. Slow work is handed off:
 `create_practice` schedules the agent pipeline in the background. It uses WebSocket instead of WebRTC
 because PaaS hosts don't route WebRTC's UDP. The browser exchanges its token for a single-use 60s
 ticket, so no long-lived token ends up in a URL.
@@ -126,6 +130,22 @@ word order, verbs), injects that profile's mistakes, runs the real pipeline, and
 right topic is diagnosed first, the plan focuses on it, and the exercise formats match the weakness.
 **Latest run: 27/27.** The first run was 26/27, which is how I found the production-practice drift above.
 
+### Where the code lives
+
+| Folder / file | What's inside |
+|---|---|
+| `backend/app/agents/pipeline.py` | The orchestrator: runs Analyst → Planner → Generator → Validator, plan guard-rails, saving, rules fallback |
+| `backend/app/agents/definitions.py` | Every agent and its prompt |
+| `backend/app/agents/schemas.py` | The typed (Pydantic) outputs each agent must return |
+| `backend/app/agents/tools.py`, `learner_data.py` | The tools agents call and the database read models behind them |
+| `backend/app/agents/validation.py` | The output guardrail that checks every generated exercise |
+| `backend/app/agents/duo.py` | Smarto chat: topic guard, tools (`create_practice` …), "Why?" explanations |
+| `backend/app/agents/fallback.py`, `observability.py` | Rules engine without an LLM; `agent_runs` logging and the daily limit |
+| `backend/app/voice/` | Voice tutor: Pipecat pipeline (`pipeline.py`) and WebSocket + tickets (`routes.py`) |
+| `backend/app/services/grading.py`, `mastery.py` | Error classification and the per-topic learner model |
+| `backend/evals/run.py` | Behavioural evals of the agents |
+| `frontend/src/components/tutor/` | Chat, voice, and the "How Smarto learns" page |
+
 ---
 
 ## The full-stack part
@@ -134,7 +154,7 @@ right topic is diagnosed first, the plan focuses on it, and the exercise formats
 five exercise types (multiple choice, word-bank translation, match pairs, fill the blank, type the
 answer); the green/red feedback bar with mistakes re-queued; hearts with regeneration and refills;
 XP, daily goal, streaks with freezes; daily quests, 11 achievements, a weekly league; profile,
-shop, dark mode, mobile layout. The owl mascot and icons are original; no Duolingo assets are used.
+shop, dark mode, mobile layout. Smarto (the violet bird mascot) and the icons are original; no Duolingo assets are used.
 
 **Architecture:** `backend/app/api` (thin routes) → `services` (lesson engine, grading, gamification)
 → `models` (SQLAlchemy). `agents/` sits beside `services/` and reads through read models in
@@ -154,7 +174,7 @@ shop, dark mode, mobile layout. The owl mascot and icons are original; no Duolin
 | `achievements`, `user_achievements` | Badges. |
 | `adaptive_plans` | Agent output: diagnosis, plan, learner message, status `pending → ready → consumed`. |
 | `agent_runs` | One row per agent call (observability and the daily budget). |
-| `tutor_messages` | Chat and voice transcripts (Duo's memory). |
+| `tutor_messages` | Chat and voice transcripts (Smarto's memory). |
 
 ### API (`/api/v1`, bearer token, docs at `/docs`)
 
@@ -163,11 +183,26 @@ shop, dark mode, mobile layout. The owl mascot and icons are original; no Duolin
 | `POST /auth/guest` | Create your own learner + token |
 | `GET /me`, `GET /path`, `GET /profile`, `GET /leaderboard`, `GET /quests` | App state |
 | `POST /sessions`, `POST /sessions/{id}/answers`, `POST /sessions/{id}/complete` | Lesson loop, graded server-side; completing a lesson triggers the tutor |
-| `GET /tutor/brain`, `POST /tutor/plan`, `POST /tutor/simulate` | How Duo learns, re-run, inject test mistakes |
+| `GET /tutor/brain`, `POST /tutor/plan`, `POST /tutor/simulate` | How Smarto learns, re-run, inject test mistakes |
 | `POST /tutor/chat`, `POST /tutor/explain` | Chat and mistake explanations |
 | `POST /voice/ticket`, `WS /voice/ws` | Voice session |
 
 ---
+
+## Security
+
+- **Keys never leave the server.** OpenAI, Deepgram and Cerebras keys live only in Render's environment
+  variables (and a gitignored local `.env`). The frontend's only setting is the public API URL.
+- **Audited** before submission: every real key was checked against the full git history and every JS
+  file the live site serves (no matches). GitHub secret scanning and push protection are on (0 alerts).
+  `npm audit`: 0 vulnerabilities. `pip-audit`: one advisory in `nltk` (a voice-library dependency) for
+  model-file APIs this app never calls; no patched version exists yet.
+- **Auth:** signed guest tokens, every query scoped to the token's learner (tested), and the LLM can never
+  choose a user id. There is no default JWT secret: if `JWT_SECRET` is missing, a random one is generated.
+- **Voice:** single-use 60s tickets instead of tokens in URLs, origin check, one live session per learner.
+- **Abuse and cost:** CORS locked to the app's domains, rate limits, 15 AI actions per learner per day,
+  an input guardrail against prompt injection, server-side grading, security headers, non-root Docker
+  user, and least-privilege CI.
 
 ## Run it locally
 
