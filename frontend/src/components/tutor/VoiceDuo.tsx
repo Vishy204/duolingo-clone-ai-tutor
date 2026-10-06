@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { MicOff, PhoneOff, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { api, voiceSocketUrl } from "@/lib/api";
@@ -28,7 +28,9 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
   const [lines, setLines] = useState<Line[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const client = useRef<{ disconnect: () => Promise<void> } | null>(null);
+  type Client = { disconnect: () => Promise<void>; enableMic: (on: boolean) => void };
+  const client = useRef<Client | null>(null);
+  const [micOn, setMicOn] = useState(true);
   // The server can emit the same sentence more than once; keep one copy per Smarto turn.
   const turn = useRef<string[]>([]);
   const scroller = useRef<HTMLDivElement>(null);
@@ -56,8 +58,15 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
     setState("idle");
   };
 
+  const toggleMic = () => {
+    const next = !micOn;
+    client.current?.enableMic(next);
+    setMicOn(next);
+  };
+
   const startCall = async () => {
     await stop();
+    setMicOn(true);
     setErr(null);
     setLines([]);
     turn.current = [];
@@ -100,7 +109,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
           },
         },
       });
-      client.current = pc as unknown as { disconnect: () => Promise<void> };
+      client.current = pc as unknown as Client;
       await pc.connect({ wsUrl: await voiceSocketUrl() });
     } catch (e) {
       client.current = null;
@@ -118,7 +127,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
   const label = {
     idle: "Tap to talk",
     connecting: "Starting…",
-    listening: "Go ahead, I'm listening",
+    listening: micOn ? "Go ahead, I'm listening" : "Mic off. Tap it when you want to talk",
     you: "Hearing you…",
     duo: "Smarto is speaking",
     error: "Couldn't connect",
@@ -130,19 +139,44 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
         <Mascot size={variant === "fab" ? 96 : 112} mood={state === "duo" ? "talk" : state === "you" ? "think" : "happy"} />
         {state === "you" && <span className="absolute -right-2 top-2 h-4 w-4 animate-ping rounded-full bg-duo-blue" />}
       </div>
-      <button
-        onClick={live ? stop : startCall}
-        className={`relative grid h-20 w-20 place-items-center rounded-full ${state === "connecting" || state === "listening" ? "ring-8 ring-brand/25" : ""} ${state === "connecting" ? "animate-pulse" : ""} ${live && state !== "connecting" ? "bg-duo-red" : "bg-brand"} shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1`}
-        aria-label={live ? "End voice chat" : "Start voice chat"}
-      >
-        {state === "connecting" ? (
-          <span className="h-8 w-8 animate-spin rounded-full border-4 border-white/40 border-t-white" />
-        ) : live ? (
-          <span className="h-6 w-6 rounded-md bg-white" />
-        ) : (
-          <Mic size={36} />
-        )}
-      </button>
+      {live && state !== "connecting" ? (
+        <div className="flex items-center gap-5">
+          <button
+            onClick={toggleMic}
+            aria-pressed={micOn}
+            aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
+            className={`grid h-20 w-20 place-items-center rounded-full shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1 ${
+              micOn ? "bg-brand ring-8 ring-brand/25" : "border-2 border-line bg-surface-2 text-muted"
+            }`}
+          >
+            {micOn ? <Mic size={36} /> : <MicOff size={34} strokeWidth={2.5} />}
+          </button>
+          <button
+            onClick={stop}
+            aria-label="End voice chat"
+            className="flex flex-col items-center gap-1 text-xs font-extrabold uppercase tracking-wide text-duo-red"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-duo-red text-white shadow-[0_4px_0_rgba(0,0,0,0.2)] active:translate-y-0.5">
+              <PhoneOff size={22} strokeWidth={2.5} />
+            </span>
+            End
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={state === "connecting" ? stop : startCall}
+          className={`relative grid h-20 w-20 place-items-center rounded-full bg-brand shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1 ${
+            state === "connecting" ? "animate-pulse ring-8 ring-brand/25" : ""
+          }`}
+          aria-label={state === "connecting" ? "Cancel" : "Start voice chat"}
+        >
+          {state === "connecting" ? (
+            <span className="h-8 w-8 animate-spin rounded-full border-4 border-white/40 border-t-white" />
+          ) : (
+            <Mic size={36} />
+          )}
+        </button>
+      )}
       <div className="text-sm font-extrabold uppercase tracking-wide text-muted">{label}</div>
       {err && (
         <div className="w-full rounded-xl bg-duo-red/10 px-3 py-2 text-center text-sm text-duo-red">
