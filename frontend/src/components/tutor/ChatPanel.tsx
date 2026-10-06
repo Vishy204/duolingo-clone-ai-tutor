@@ -8,6 +8,7 @@ import { keys, useInsights } from "@/lib/hooks";
 import type { ChatMessage } from "@/lib/types";
 import Mascot from "../Mascot";
 import { Mic } from "lucide-react";
+import RichText from "../ui/RichText";
 
 const SUGGESTIONS = [
   "Is 'hola amigo' correct?",
@@ -118,7 +119,7 @@ export default function ChatPanel() {
           onChange={(e) => setInput(e.target.value)}
           maxLength={500}
           placeholder="Ask Smarto…"
-          className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 text-ink outline-none focus:border-brand-border"
+          className="min-w-0 flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 text-ink outline-none focus:border-brand-border"
         />
         <button className="btn btn-brand h-11" disabled={!input.trim() || !!pending}>Send</button>
       </form>
@@ -131,13 +132,12 @@ function Bubble({ m }: { m: ChatMessage }) {
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-[15px] ${
+        className={`max-w-[85%] rounded-2xl px-4 py-2 text-[15px] ${mine ? "whitespace-pre-wrap" : ""} ${
           mine ? "bg-brand text-white" : m.blocked ? "border-2 border-duo-orange text-ink" : "border-2 border-line text-ink"
         }`}
       >
         {m.channel === "voice" && <Mic size={13} className="mr-1 inline opacity-70" />}
-        {m.content}
-        
+        {mine ? m.content : <RichText text={m.content} />}
       </div>
     </div>
   );

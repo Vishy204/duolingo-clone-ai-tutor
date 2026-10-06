@@ -89,12 +89,19 @@ function UnitSection({
         </button>
       </div>
 
-      <div className="relative flex flex-col items-center gap-5">
+      {/* `isolate` keeps the per-node z-indexes inside the path, below the sticky banner, nav and mic button. */}
+      <div className="relative isolate flex flex-col items-center gap-5">
         {unit.nodes.map((node, i) => {
           const isActive = node.id === activeNodeId;
           return (
             // Earlier nodes stack above later ones so a node's popover is never covered by the next node.
-            <div key={node.id} className="relative flex w-full flex-col items-center" style={{ zIndex: 100 - i }}>
+            // The active node gets room above it for the bobbing START bubble, so the node before it
+            // (which stacks higher) never covers the bubble.
+            <div
+              key={node.id}
+              className={`relative flex w-full flex-col items-center ${isActive && i > 0 ? "mt-10" : ""}`}
+              style={{ zIndex: 100 - i }}
+            >
               <div className="relative z-[2]" style={{ transform: `translateX(${OFFSETS[i % OFFSETS.length]}px)` }} ref={isActive ? activeRef : undefined}>
                 <Node node={node} color={unit.color} isActive={isActive} />
               </div>

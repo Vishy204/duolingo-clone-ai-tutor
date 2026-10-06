@@ -7,6 +7,7 @@ import { NavLeague, Sparkle } from "../ui/Icons";
 import TopStats from "./TopStats";
 import { Gift, Package, Zap } from "lucide-react";
 import { QuestIcon } from "../ui/AppIcons";
+import { plainText } from "../ui/RichText";
 
 export default function RightRail({ showStats = true }: { showStats?: boolean }) {
   return (
@@ -41,7 +42,7 @@ export function DuoInsightsCard() {
           <Mascot size={64} mood={data.running ? "think" : "happy"} />
         </div>
         <div className="text-[15px] leading-snug text-ink">
-          {plan?.summary || "Finish a lesson and I'll analyse your answers to build practice just for you!"}
+          {(plan?.summary && plainText(plan.summary)) || "Finish a lesson and I'll analyse your answers to build practice just for you!"}
         </div>
       </div>
       {data.weakest.length > 0 && (

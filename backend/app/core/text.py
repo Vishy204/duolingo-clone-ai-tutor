@@ -9,4 +9,5 @@ _EMOJI = re.compile(
 
 def strip_emoji(text: str) -> str:
     """The UI is emoji-free, so learner-facing model output is cleaned before it is stored."""
-    return re.sub(r"\s{2,}", " ", _EMOJI.sub("", text)).strip()
+    # Collapse runs of spaces left behind by removed emoji, but keep line breaks (lists, paragraphs).
+    return re.sub(r"[ \t]{2,}", " ", _EMOJI.sub("", text)).strip()

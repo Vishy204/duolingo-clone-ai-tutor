@@ -5,6 +5,7 @@ import { useState } from "react";
 import { post } from "@/lib/api";
 import type { AnswerResult } from "@/lib/types";
 import { Check, Close, Sparkle } from "../ui/Icons";
+import RichText, { plainText } from "../ui/RichText";
 
 const PRAISE = ["Nicely done!", "Great job!", "Amazing!", "Excellent!", "You're on fire!", "Correct!"];
 
@@ -74,8 +75,8 @@ export default function FeedbackSheet({
                     {ex.error && <span className="text-muted">{ex.error}</span>}
                     {ex.data && (
                       <>
-                        <div className="font-extrabold text-duo-purple">{ex.data.headline}</div>
-                        <div className="mt-1">{ex.data.explanation}</div>
+                        <div className="font-extrabold text-duo-purple">{plainText(ex.data.headline)}</div>
+                        <RichText className="mt-1" text={ex.data.explanation} />
                         <div className="mt-2 text-muted">
                           <span className="text-ink">{ex.data.example_es}</span> · {ex.data.example_en}
                         </div>

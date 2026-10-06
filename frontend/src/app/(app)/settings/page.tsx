@@ -41,7 +41,7 @@ export default function SettingsPage() {
             value={name ?? me.display_name}
             maxLength={40}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 py-3 text-ink outline-none focus:border-duo-blue-border"
+            className="min-w-0 flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 py-3 text-ink outline-none focus:border-brand-border"
           />
           <button className="btn btn-blue" disabled={!name || name === me.display_name} onClick={() => save({ display_name: name }).then(() => toast({ title: "Saved!", icon: <CircleCheck className="text-duo-green" /> }))}>
             Save

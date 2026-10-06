@@ -9,6 +9,7 @@ import RightRail from "./RightRail";
 import Sidebar, { MobileNav } from "./Sidebar";
 import TopStats from "./TopStats";
 import { Snowflake, Sparkles } from "lucide-react";
+import { plainText } from "../ui/RichText";
 
 /** Applies learner preferences (theme, sound) and announces new tutor plans. */
 export function useLearnerEffects() {
@@ -40,7 +41,7 @@ export function useLearnerEffects() {
   useEffect(() => {
     const id = insights?.ready_plan?.id ?? null;
     if (id && lastPlan.current !== null && id !== lastPlan.current) {
-      toast({ title: "Smarto built you a new practice!", body: insights?.ready_plan?.summary || "", icon: <Sparkles className="text-duo-purple" />, tone: "purple" });
+      toast({ title: "Smarto built you a new practice!", body: plainText(insights?.ready_plan?.summary || ""), icon: <Sparkles className="text-duo-purple" />, tone: "purple" });
       invalidate();
     }
     if (id) lastPlan.current = id;
@@ -59,7 +60,7 @@ export function useLearnerEffects() {
     if (pathname === "/custom") return; // the card on this page already flips to Ready
     toast({
       title: "Your custom practice is ready",
-      body: custom?.summary || "Open the Custom Practice tab to start it.",
+      body: plainText(custom?.summary || "Open the Custom Practice tab to start it."),
       icon: <Sparkles className="text-brand" />,
       tone: "purple",
       action: { label: "Open", href: "/custom" },

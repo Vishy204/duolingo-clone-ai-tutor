@@ -52,7 +52,7 @@ function TutorTabs() {
       </div>
 
       {tab === "talk" ? (
-        <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
           <ChatPanel />
           <VoiceDuo />
         </div>
