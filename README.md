@@ -378,6 +378,9 @@ matches a learner, the frontend creates a new guest automatically. A scheduled w
 - The league uses seeded learners whose weekly XP is generated deterministically.
 - Gems, Super and in-app purchases are mocked; speaking exercises, friends and more languages are placeholders.
 - Audio uses the browser's speech synthesis for prompts; the voice tutor is an extra feature.
+- The voice tutor uses a Spanish voice that also speaks English. Its English has a slight accent, which is a deliberate
+  trade-off: for a Spanish course, getting the Spanish pronunciation right matters more. A different voice can be set
+  with `VOICE_TTS_VOICE`.
 - The visual design follows Duolingo's style with an original mascot and icons; no Duolingo assets are used.
 
 ---
