@@ -78,14 +78,32 @@ def warm_up() -> None:
     after a deploy took ~15s on the free instance; at boot (in a thread) it costs nobody anything."""
     if load_voice_config() is None:
         return
-    import pipecat.serializers.protobuf  # noqa: F401
-    import pipecat.transports.websocket.fastapi  # noqa: F401
     import pipecat.workers.runner  # noqa: F401
     from pipecat.audio.vad.silero import SileroVADAnalyzer
+    from pipecat.serializers.protobuf import ProtobufFrameSerializer
+    from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams, FastAPIWebsocketTransport
 
-    import app.voice.pipeline  # noqa: F401  (Deepgram, Cerebras/OpenAI services)
+    from app.voice.pipeline import build_worker
 
     SileroVADAnalyzer()  # first load of the ONNX model
+
+    # Dry run: build (never start) a full pipeline once, so the first real session doesn't pay for
+    # constructing every service for the first time on the small free-tier CPU.
+    with SessionLocal() as db:
+        bot_id = db.scalar(select(User.id).where(User.is_bot.is_(True)).limit(1))
+    if bot_id is None:
+        return
+
+    class _NoSocket:  # only stored by the transport; nothing is sent because the pipeline never runs
+        client_state = application_state = None
+
+    async def dry_build() -> None:
+        transport = FastAPIWebsocketTransport(_NoSocket(), FastAPIWebsocketParams(
+            audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False,
+            serializer=ProtobufFrameSerializer()))
+        build_worker(transport, load_voice_config(), bot_id)
+
+    asyncio.run(dry_build())
 
 
 @router.get("/status")
