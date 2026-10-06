@@ -64,7 +64,7 @@ OpenAI Agents SDK · Pipecat (Deepgram + Cerebras)
 ### Core Duolingo experience (the brief)
 | Area | What's there |
 |---|---|
-| **Learning path** | 3 units / 13 nodes on a snaking path. Each node is locked, active or completed, with a progress ring, a bouncing **START** bubble and a popover. There are treasure chests (gems), unit trophies, a guidebook per unit and Legendary (crown) levels. |
+| **Learning path** | 3 units / 17 nodes (11 lesson levels, 3 chests, 3 trophies) on a snaking path. Each node is locked, active or completed, with a progress ring, a bouncing **START** bubble and a popover. There are treasure chests (gems), unit trophies, a guidebook per unit and Legendary (crown) levels. |
 | **Lesson player** | Five exercise types: **multiple choice (picture cards)**, **translate with a word bank** (animated tiles, or switch to the keyboard), **match pairs**, **fill in the blank**, **type the answer** (with accent keys). It has the signature green/red feedback bar, a progress bar and an "N in a row" combo. Mistakes come back at the end of the lesson. Keyboard shortcuts: 1–9 and Enter. |
 | **Hearts** | You lose one per mistake. They regenerate lazily (1 every 4h), you can refill with gems or *practice to earn hearts*, and there's an out-of-hearts modal. |
 | **Gamification** | XP, a daily goal, a streak with streak freezes (testable via simulated days), daily quests, 11 achievements, a weekly **Bronze League** of seeded learners that keep earning XP, gems, and a shop. |
