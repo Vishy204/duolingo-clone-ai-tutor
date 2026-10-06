@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import utcnow
 from app.models import Course, Exercise, ExerciseAttempt, LessonSession, Skill, Unit, User, UserSkillProgress, XpEvent
-from app.services import achievements, mastery
+from app.services import achievements, mastery, simulator
 from app.services.exercise_types import PRODUCTION_TYPES
 
 ADJECTIVES = ["Happy", "Brave", "Swift", "Clever", "Sunny", "Jolly", "Mighty", "Calm"]
@@ -80,8 +80,13 @@ def _seed_history(db: Session, user: User, course: Course, rng: random.Random) -
             for ex in exercises:
                 correct, typo, err = _simulate_answer(ex, rng)
                 mistakes += int(not correct)
+                answer = {"simulated": True}
+                if err in ("gender_article", "accent"):  # a realistic wrong answer reviewers can read
+                    wrong = simulator._wrong_answer("gender" if err == "gender_article" else "accents", ex, rng)
+                    if wrong:
+                        answer = {**wrong, "simulated": True}
                 db.add(ExerciseAttempt(
-                    user_id=user.id, exercise_id=ex.id, answer={"simulated": True}, is_correct=correct,
+                    user_id=user.id, exercise_id=ex.id, answer=answer, is_correct=correct,
                     is_typo=typo, error_type=err, time_ms=rng.randint(2500, 9000), created_at=when,
                 ))
                 for concept in ex.concepts:

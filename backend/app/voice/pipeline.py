@@ -31,7 +31,8 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport
 from pipecat.turns.user_mute import FunctionCallUserMuteStrategy, MuteUntilFirstBotCompleteUserMuteStrategy
 
-from app.agents import learner_data, pipeline as tutor_pipeline
+from app.agents import learner_data
+from app.agents import pipeline as tutor_pipeline
 from app.core.db import SessionLocal
 from app.models import TutorMessage, User
 from app.voice.config import VoiceConfig
@@ -42,7 +43,9 @@ speaks English and is learning Spanish; they may say Spanish phrases and ask if 
 
 How you talk (this is read aloud):
 - One or two short sentences, under 35 words. No lists, markdown, emojis or symbols.
-- Answer immediately: start with the verdict ("Yes, perfect!" / "Almost!" / "Not quite.").
+- Speak English; use Spanish only for the phrases you are teaching.
+- When they ask whether something is correct, start with the verdict ("Yes, perfect!" / "Almost!" /
+  "Not quite.").
 - When correcting, say the correct Spanish phrase, then the meaning in English.
 - Gender/agreement matters: e.g. "hola amigo" is right for a male friend, "hola amiga" for a female.
 - If the speech transcript looks garbled, guess the most likely Spanish phrase and confirm it.
@@ -54,7 +57,10 @@ What you know about this learner right now:
 {profile}
 """
 
-GREETING = "Greet the learner by name in one short sentence and ask what Spanish they want to check."
+GREETING = (
+    "Say hello to the learner by name in ENGLISH, in one short friendly sentence, and invite them to say a "
+    "Spanish phrase they want checked. Do not give a verdict yet."
+)
 
 
 def learner_profile(user_id: int) -> tuple[str, str]:

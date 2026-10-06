@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* Duolingo palette (named like Duolingo's design tokens) */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f7f7;
+  --border: #e5e5e5;
+  --text: #4b4b4b;
+  --text-muted: #777777;
+  --text-faint: #afafaf;
+
+  --green: #58cc02;
+  --green-dark: #58a700;
+  --green-light: #d7ffb8;
+  --blue: #1cb0f6;
+  --blue-dark: #1899d6;
+  --blue-light: #ddf4ff;
+  --blue-border: #84d8ff;
+  --red: #ff4b4b;
+  --red-dark: #ea2b2b;
+  --red-light: #ffdfe0;
+  --yellow: #ffc800;
+  --yellow-dark: #e5a000;
+  --orange: #ff9600;
+  --orange-dark: #cd7900;
+  --purple: #ce82ff;
+  --purple-dark: #a568cc;
+  --gem: #1cb0f6;
+  --locked: #e5e5e5;
+  --locked-dark: #b7b7b7;
+}
+
+:root[data-theme="dark"] {
+  --bg: #131f24;
+  --surface: #131f24;
+  --surface-2: #202f36;
+  --border: #37464f;
+  --text: #f1f7fb;
+  --text-muted: #c7d4db;
+  --text-faint: #52656d;
+  --green-light: #233b1c;
+  --blue-light: #1c3b4a;
+  --red-light: #3f2226;
+  --locked: #37464f;
+  --locked-dark: #1f2d33;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-duo-green: var(--green);
+  --color-duo-green-dark: var(--green-dark);
+  --color-duo-green-light: var(--green-light);
+  --color-duo-blue: var(--blue);
+  --color-duo-blue-dark: var(--blue-dark);
+  --color-duo-blue-light: var(--blue-light);
+  --color-duo-blue-border: var(--blue-border);
+  --color-duo-red: var(--red);
+  --color-duo-red-dark: var(--red-dark);
+  --color-duo-red-light: var(--red-light);
+  --color-duo-yellow: var(--yellow);
+  --color-duo-yellow-dark: var(--yellow-dark);
+  --color-duo-orange: var(--orange);
+  --color-duo-orange-dark: var(--orange-dark);
+  --color-duo-purple: var(--purple);
+  --color-duo-purple-dark: var(--purple-dark);
+  --font-sans: var(--font-nunito), "Nunito", system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-nunito), "Nunito", system-ui, sans-serif;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Chunky 3D buttons: the signature Duolingo button with a darker bottom "lip" */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 16px;
+  padding: 0 1.25rem;
+  height: 50px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 2px solid transparent;
+  border-bottom-width: 4px;
+  transition: filter 0.1s, transform 0.05s;
+  user-select: none;
+  cursor: pointer;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  margin-top: 2px;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.btn:disabled {
+  cursor: default;
+}
+.btn-green { background: var(--green); border-color: var(--green-dark); color: #fff; }
+.btn-blue { background: var(--blue); border-color: var(--blue-dark); color: #fff; }
+.btn-red { background: var(--red); border-color: var(--red-dark); color: #fff; }
+.btn-purple { background: var(--purple); border-color: var(--purple-dark); color: #fff; }
+.btn-yellow { background: var(--yellow); border-color: var(--yellow-dark); color: #fff; }
+.btn-white { background: var(--surface); border-color: var(--border); color: var(--blue); }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--text-muted); }
+.btn-disabled, .btn:disabled.btn-green, .btn:disabled.btn-blue, .btn:disabled.btn-red {
+  background: var(--locked);
+  border-color: var(--locked);
+  color: var(--text-faint);
+}
+
+/* Cards and tiles */
+.card {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.tile {
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  transition: transform 0.05s;
+}
+.tile:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.tile-selected { border-color: var(--blue-border); background: var(--blue-light); color: var(--blue-dark); }
+.tile-correct { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+.tile-wrong { border-color: var(--red); background: var(--red-light); color: var(--red-dark); }
+.tile-done { border-color: var(--border); background: var(--surface); color: var(--text-faint); }
+
+/* Ruled answer lines for word bank exercises */
+.ruled {
+  background-image: linear-gradient(to bottom, transparent 58px, var(--border) 58px, var(--border) 60px, transparent 60px);
+  background-size: 100% 62px;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -6px); }
+}
+.animate-bob { animation: bob 1.6s ease-in-out infinite; }
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+.animate-shake { animation: shake 0.45s both; }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(206, 130, 255, 0.55); }
+  100% { box-shadow: 0 0 0 18px rgba(206, 130, 255, 0); }
+}
+.animate-pulse-ring { animation: pulse-ring 1.8s ease-out infinite; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

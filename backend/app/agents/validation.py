@@ -53,7 +53,9 @@ def clean_text(text: str) -> str:
     return t.strip().strip(_QUOTES).strip()
 
 
-def validate(g: GeneratedExercise, known_concepts: set[str], vocab: set[str], lexicon_emoji: dict[str, str]) -> tuple[Converted | None, str | None]:
+def validate(
+    g: GeneratedExercise, known_concepts: set[str], vocab: set[str], lexicon_emoji: dict[str, str]
+) -> tuple[Converted | None, str | None]:
     g.source_text = clean_text(g.source_text)
     g.answer = clean_text(g.answer)
     concepts = [c for c in g.concept_keys if c in known_concepts]

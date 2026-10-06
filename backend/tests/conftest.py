@@ -22,7 +22,8 @@ def client():
 
 @pytest.fixture()
 def auth(client):
-    r = client.post("/api/v1/auth/guest", json={}, headers={"x-forwarded-for": f"10.0.{os.urandom(1)[0]}.{os.urandom(1)[0]}"})
+    ip = f"10.0.{os.urandom(1)[0]}.{os.urandom(1)[0]}"
+    r = client.post("/api/v1/auth/guest", json={}, headers={"x-forwarded-for": ip})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['token']}"}
 

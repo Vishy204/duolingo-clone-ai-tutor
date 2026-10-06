@@ -1,7 +1,8 @@
 """Auth (guest), learner state, the learning path, profile, leaderboard, shop, settings."""
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.agents.pipeline import run_pipeline
 from app.api.deps import current_user
 from app.core.clock import user_now, user_today
 from app.core.config import get_settings
@@ -50,10 +51,12 @@ def user_state(db: Session, user: User) -> dict:
 
 
 @router.post("/auth/guest")
-def create_guest(body: GuestIn, request: Request, db: Session = Depends(get_db)):
+def create_guest(body: GuestIn, request: Request, background: BackgroundTasks, db: Session = Depends(get_db)):
     guest_limiter.check(client_ip(request))
     user = guests.create_guest(db, body.name)
     db.commit()
+    # The demo learner arrives with history, so the tutor analyses it straight away.
+    background.add_task(run_pipeline, user.id, "onboarding")
     return {"token": create_access_token(user.id), "user": user_state(db, user)}
 
 

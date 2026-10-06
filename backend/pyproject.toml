@@ -1,10 +1,13 @@
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/seed/content_es.py" = ["E501"]  # authored course content reads better unwrapped
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

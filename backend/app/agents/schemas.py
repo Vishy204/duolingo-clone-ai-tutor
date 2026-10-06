@@ -85,8 +85,8 @@ class GeneratedSet(BaseModel):
 class Explanation(BaseModel):
     headline: str = Field(description="Max 8 words, e.g. 'Pan is masculine: el pan'")
     explanation: str = Field(description="1-2 short sentences, friendly, specific to their answer")
-    example_es: str
-    example_en: str
+    example_es: str = Field(description="ONE short new Spanish example sentence using the rule (max 8 words)")
+    example_en: str = Field(description="Its English translation only")
 
 
 class TopicVerdict(BaseModel):

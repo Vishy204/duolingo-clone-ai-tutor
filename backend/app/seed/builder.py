@@ -24,7 +24,6 @@ def build_lesson_exercises(
     rng = random.Random(seed)
     words = lesson["words"]
     sentences = lesson["sentences"]
-    out: list[dict] = []
 
     def concepts_for(extra: list[str]) -> list[str]:
         base = [c for c in skill_concepts if c.startswith("vocab.")][:1]
@@ -41,7 +40,9 @@ def build_lesson_exercises(
         mc_items.append({
             "type": "multiple_choice",
             "prompt": "Select the correct image",
-            "payload": {"question": f"Which one of these is “{en}”?", "choices": choices, "answer": answer, "speak": es},
+            "payload": {
+                "question": f"Which one of these is “{en}”?", "choices": choices, "answer": answer, "speak": es,
+            },
             "difficulty": 1,
             "concepts": concepts_for(cs),
         })

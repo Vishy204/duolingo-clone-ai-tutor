@@ -8,7 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.core.clock import user_now
 from app.models import (
-    Concept, Exercise, ExerciseAttempt, LessonSession, Lexeme, User, UserConceptMastery,
+    Concept,
+    Exercise,
+    ExerciseAttempt,
+    LessonSession,
+    Lexeme,
+    User,
+    UserConceptMastery,
 )
 from app.services import progress
 from app.services.exercise_types import PRODUCTION_TYPES, display_answer
@@ -66,7 +72,10 @@ def recent_mistakes(db: Session, user: User, limit: int = 20) -> list[dict]:
             "exercise_type": ex.type,
             "concepts": [c.key for c in ex.concepts],
             "task": ex.payload.get("source") or ex.payload.get("sentence") or ex.payload.get("question") or ex.prompt,
-            "learner_answer": given if given not in (None, "") else ("(simulated)" if answer.get("simulated") else None),
+            "learner_answer": (
+                given if given not in (None, "") else ("(simulated)" if answer.get("simulated") else None)
+            ),
+            "sample": bool(answer.get("simulated") or answer.get("simulated_profile")),
             "correct_answer": display_answer(ex.type, ex.payload),
             "error_type": a.error_type,
             "typo_only": a.is_typo and a.is_correct,
