@@ -47,13 +47,17 @@ OpenAI Agents SDK · Pipecat (Deepgram + Cerebras)
    first two levels done). That history deliberately contains a pattern: **mostly el/la gender mistakes and missing accents**.
 2. Within ~30s the agents analyse it. The right rail shows **Duo's insights** ("You keep defaulting to masculine
    articles, so I made 4 gender drills…"), and a purple **Duo's Practice** node appears on the path.
-3. Open **Duo AI** in the sidebar (the "Tutor Brain"). You can see the whole multi-agent run: each agent's
-   tool calls, latency and tokens, the diagnosis with evidence, the plan, every AI-written exercise with
-   its rationale, and anything the validator rejected.
-4. **Check it adapts to *new* behaviour.** In the 🧪 reviewer panel, pick a different profile
-   (*"Confuses verb forms"*, *"Scrambles word order"*, *"Recognises but can't produce"*…). It injects
-   ~14 realistic wrong answers through the real grader, then re-runs the agents. Watch the diagnosis and
-   the exercises change. Or just play a lesson and get things wrong on purpose.
+3. Open **Duo AI** in the sidebar. It has two tabs:
+   - **Talk to Duo**: text chat (Agents SDK, with guardrails) and the real-time voice tutor.
+   - **How Duo learns**: the latest adaptation as four plain-English steps. **What Duo saw** shows your
+     mistakes by type. **What Duo concluded** lists each weak topic with its evidence, the likely reason, and
+     *the exact mistakes that led there*. **What Duo changed** shows the plan and why. **Your new practice**
+     shows every AI-written exercise with its rationale. The raw agent runs (tool calls, tokens, latency,
+     structured output) sit under *Under the hood*.
+4. **Check it adapts to *new* behaviour.** On **How Duo learns**, use *Test it: give Duo new mistakes* and
+   pick a learner type (*"Confuses verb forms"*, *"Scrambles word order"*, *"Recognises but can't produce"*…).
+   It adds ~14 realistic wrong answers through the real grader and re-runs the agents. The four steps fill in
+   live (about 30s), so you can check the diagnosis matches what you picked. Or play a lesson and get things wrong on purpose.
 5. Press the 🎙️ button and ask Duo something out loud.
 6. **Settings → Simulate next day** to test streaks, streak freezes and heart regeneration.
 
@@ -79,7 +83,7 @@ layout (sidebar · path · right rail). The owl mascot is **drawn from scratch i
 artwork or code was copied.
 
 ### Beyond the brief
-- **Duo AI**: a multi-agent adaptive tutor, a Tutor Brain dashboard, a chat tutor with guardrails, and "Why? Ask Duo" on every wrong answer.
+- **Duo AI**: a multi-agent adaptive tutor, a "How Duo learns" page that explains every adaptation step by step, a chat tutor with guardrails, and "Why? Ask Duo" on every wrong answer.
 - **Voice Duo**: a real-time speech tutor (Pipecat: Deepgram STT → Cerebras → Deepgram TTS).
 - **Reviewer simulator**: inject a learner profile's mistakes on demand and watch the system adapt.
 - **Behavioural evals** for the agents, plus 30 unit and API tests, and CI.
@@ -158,7 +162,7 @@ flowchart LR
   always adapts.
 - **Observability as a feature.** Every agent invocation becomes an `agent_runs` row (status,
   latency, tokens, tool calls, structured output, trace id), and SDK tracing is on, so the same
-  runs show up in the OpenAI Traces dashboard. The Tutor Brain page is built on this.
+  runs show up in the OpenAI Traces dashboard. The "How Duo learns" tab is built on this.
 - **Idempotent and budgeted.** One pipeline per learner at a time (per-user lock), a per-learner
   daily agent budget, `max_turns`, and token caps.
 
@@ -166,7 +170,7 @@ flowchart LR
 - **Duo's Practice** node on the path, plus a *Start* button in the insights card.
 - **"Duo's pick for you"**: up to 2 personalised exercises are mixed into every regular lesson.
 - **Practice to earn hearts** targets your weakest and due-for-review concepts.
-- The **insights card**, mastery bars, the Tutor Brain timeline and toasts ("Duo built you a new practice!").
+- The **insights card**, mastery bars, the "How Duo learns" story and toasts ("Duo built you a new practice!").
 
 ---
 
@@ -292,7 +296,7 @@ All routes live under `/api/v1` and take `Authorization: Bearer <guest JWT>`. In
 | `GET /leaderboard` · `GET /quests` · `GET /profile` | League, daily quests, stats and achievements |
 | `POST /shop/refill-hearts` · `POST /shop/streak-freeze` | Gem purchases (mocked currency) |
 | `POST /dev/advance-day` | Demo mode: move this learner's clock forward a day |
-| `GET /tutor/insights` · `GET /tutor/brain` | Insights card · the full Tutor Brain timeline |
+| `GET /tutor/insights` · `GET /tutor/brain` | Insights card · everything behind the "How Duo learns" tab |
 | `POST /tutor/plan` | Re-run the agents now (optional focus concepts) |
 | `POST /tutor/simulate` | Reviewer tool: inject a profile's mistakes, then re-run the agents |
 | `GET/POST /tutor/chat` | Duo chat history / send (guardrailed) |

@@ -51,7 +51,7 @@ export default function ChatPanel() {
         <Mascot size={44} animate={false} />
         <div>
           <div className="font-extrabold text-ink">Chat with Duo</div>
-          <div className="text-xs text-muted">Agents SDK · tools + guardrails · remembers your mistakes</div>
+          <div className="text-xs text-muted">Check a phrase, ask about grammar, or ask for practice</div>
         </div>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">

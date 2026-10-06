@@ -62,7 +62,7 @@ def brain(user: User = Depends(current_user), db: Session = Depends(get_db)):
         "budget_left": budget_left(db, user.id),
         "mastery": learner_data.concept_mastery(db, user),
         "error_breakdown": learner_data.error_breakdown(db, user),
-        "recent_mistakes": learner_data.recent_mistakes(db, user, 12),
+        "recent_mistakes": learner_data.recent_mistakes(db, user, 40),
         "plans": [{**_plan_view(db, p, with_exercises=True), "runs": sorted(runs_by_plan.get(p.id, []),
                                                                          key=lambda r: r["id"])}
                   for p in plan_rows],

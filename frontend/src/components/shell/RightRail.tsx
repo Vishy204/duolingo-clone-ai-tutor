@@ -66,7 +66,7 @@ export function DuoInsightsCard() {
             Start ({plan.exercise_count})
           </Link>
         )}
-        <Link href="/tutor" className="btn btn-white h-11 flex-1 text-[13px]">
+        <Link href="/tutor?tab=learn" className="btn btn-white h-11 flex-1 text-[13px]">
           See how
         </Link>
       </div>

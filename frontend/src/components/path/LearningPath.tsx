@@ -248,7 +248,7 @@ function DuoPracticeNode({ plan }: { plan: PlanCard }) {
   const ready = plan.status === "ready";
   return (
     <Link
-      href={ready ? "/practice?mode=personalized" : "/tutor"}
+      href={ready ? "/practice?mode=personalized" : "/tutor?tab=learn"}
       className="group relative flex flex-col items-center"
       aria-label="Duo's personalized practice"
     >

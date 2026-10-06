@@ -2,13 +2,18 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { post } from "@/lib/api";
 import { useBrain, useInvalidateLearner } from "@/lib/hooks";
 import type { AgentRun, Brain, Mastery, Mistake, PlanView } from "@/lib/types";
 import Mascot from "../Mascot";
-import { Sparkle } from "../ui/Icons";
 import { useToast } from "../ui/Toast";
+
+/**
+ * "How Duo learns": the latest adaptation told as a story.
+ * Your mistakes -> what Duo concluded -> what it changed -> the exercises it wrote.
+ * Raw agent traces live in a collapsed "Under the hood" section for engineers.
+ */
 
 const ERROR_LABEL: Record<string, string> = {
   gender_article: "Wrong article (el/la)",
@@ -22,144 +27,621 @@ const ERROR_LABEL: Record<string, string> = {
   vocabulary: "Wrong word",
 };
 
-const STEP_ORDER = ["Learner Analyst", "Curriculum Planner", "Exercise Generator", "Rules Engine"];
-const STEP_ICON: Record<string, string> = {
-  "Learner Analyst": "🔍",
-  "Curriculum Planner": "🗺️",
-  "Exercise Generator": "✍️",
-  "Rules Engine": "⚙️",
+const TYPE_LABEL: Record<string, string> = {
+  multiple_choice: "multiple choice",
+  translate: "build the sentence",
+  match_pairs: "match pairs",
+  fill_blank: "fill the blank",
+  type_answer: "type the answer",
 };
+
+const SEVERITY: Record<string, { label: string; color: string }> = {
+  high: { label: "Big gap", color: "#FF4B4B" },
+  medium: { label: "Some gap", color: "#FF9600" },
+  low: { label: "Small gap", color: "#FFC800" },
+};
+
+const MODE: Record<string, string> = {
+  recognition: "even when choosing from options",
+  production: "when typing or building sentences",
+  both: "both when choosing and when typing",
+};
+
+type Names = Record<string, string>;
+
+/** Which mistake types point at which topic, so "Mistakes that led here" shows the relevant ones. */
+const CONCEPT_ERRORS: Record<string, string[]> = {
+  "grammar.gender_articles": ["gender_article"],
+  "spelling.accents": ["accent"],
+  "grammar.adjective_agreement": ["agreement"],
+  "grammar.word_order": ["word_order", "missing_word", "extra_word"],
+};
+
+function evidenceFor(concept: string, mistakes: Mistake[]): Mistake[] {
+  const tagged = mistakes.filter((m) => m.concepts.includes(concept));
+  const wanted = CONCEPT_ERRORS[concept] || (concept.startsWith("verb.") ? ["verb_form"] : concept.startsWith("vocab.") ? ["vocabulary", "spelling"] : []);
+  const exact = tagged.filter((m) => m.error_type && wanted.includes(m.error_type));
+  return (exact.length ? exact : tagged).slice(0, 3);
+}
+
+const humanize = (key: string) => {
+  const last = key.split(".").pop() || key;
+  const s = last.replace(/_/g, " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
+const when = (iso: string) => {
+  const mins = Math.round((Date.now() - new Date(iso + "Z").getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60 * 24) return `${Math.round(mins / 60)} h ago`;
+  return new Date(iso + "Z").toLocaleDateString();
+};
+
+function triggerLabel(trigger: string, profiles: Brain["profiles"]) {
+  if (trigger === "onboarding") return "you joined";
+  if (trigger === "lesson_complete") return "you finished a lesson";
+  if (trigger.endsWith("_complete")) return "you finished a practice";
+  if (trigger === "manual") return "you asked Duo to re-analyse";
+  if (trigger === "chat") return "you asked for practice in chat";
+  if (trigger === "voice") return "you asked for practice by voice";
+  if (trigger.startsWith("simulated:")) {
+    const p = profiles.find((x) => x.key === trigger.split(":")[1]);
+    return `test mistakes were added (“${p?.label ?? "simulated learner"}”)`;
+  }
+  return trigger.replace(/_/g, " ");
+}
 
 export default function TutorBrain() {
   const { data, isLoading } = useBrain();
+  const storyRef = useRef<HTMLDivElement>(null);
   if (isLoading || !data) {
     return (
       <div className="flex flex-col items-center gap-3 py-20 text-muted">
-        <Mascot mood="think" /> Loading Duo&apos;s brain…
+        <Mascot mood="think" /> Loading…
       </div>
     );
   }
+  const names: Names = Object.fromEntries(data.mastery.map((m) => [m.concept_key, m.name]));
+  const [latest, ...older] = data.plans;
+
   return (
-    <div className="space-y-8">
-      <Hero data={data} />
-      <ReviewerPanel data={data} />
-      <WhatDuoSees data={data} />
-      <section>
-        <h2 className="mb-1 text-2xl font-extrabold text-ink">How Duo adapted</h2>
-        <p className="mb-4 text-muted">
-          Each run is the multi-agent pipeline reacting to your latest answers. Newest first. Expand a step to see its
-          tool calls and structured output.
-        </p>
-        <div className="space-y-5">
-          {data.plans.map((p, i) => (
-            <PlanCardView key={p.id} plan={p} defaultOpen={i === 0} />
-          ))}
-          {data.plans.length === 0 && <div className="card p-6 text-center text-muted">No runs yet. Finish a lesson!</div>}
-        </div>
-      </section>
+    <div className="space-y-6">
+      <HowItWorks />
+      <TryIt data={data} onInjected={() => storyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+
+      <div ref={storyRef} className="scroll-mt-24">
+        {latest ? (
+          <Story plan={latest} data={data} names={names} latest />
+        ) : (
+          <div className="card flex flex-col items-center gap-3 p-8 text-center text-muted">
+            <Mascot size={80} mood="think" />
+            Duo hasn&apos;t analysed you yet. Finish a lesson, or add test mistakes above.
+          </div>
+        )}
+      </div>
+
+      <LearnerModel data={data} />
+
+      {older.length > 0 && (
+        <section>
+          <h3 className="mb-3 text-lg font-extrabold text-ink">Earlier updates</h3>
+          <div className="space-y-3">
+            {older.map((p) => (
+              <OlderPlan key={p.id} plan={p} data={data} names={names} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function Hero({ data }: { data: Brain }) {
-  const invalidate = useInvalidateLearner();
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const rerun = async () => {
-    setBusy(true);
-    try {
-      await post("/tutor/plan", { focus: [] });
-      toast({ title: "Duo is re-analysing your learning", icon: "🔍", tone: "purple" });
-      invalidate();
-    } finally {
-      setBusy(false);
-    }
-  };
+/* ------------------------------------------------------------------ overview */
+
+function HowItWorks() {
+  const steps = [
+    { icon: "✍️", title: "You answer", body: "Every answer is graded and the mistake gets a type: wrong article, missing accent, word order…" },
+    { icon: "🔍", title: "Duo finds the cause", body: "After each lesson an AI analyst reads those mistakes and works out what you misunderstand." },
+    { icon: "🗺️", title: "Duo plans", body: "A planner picks the topics to fix and the exercise types that train them." },
+    { icon: "🎯", title: "Duo writes practice", body: "A writer creates new exercises using only words you've learned. Each one is checked before you see it." },
+  ];
   return (
-    <div className="card flex flex-col items-center gap-5 border-duo-purple p-6 sm:flex-row">
-      <Mascot size={120} mood={data.running ? "think" : "wave"} />
-      <div className="flex-1">
-        <div className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-duo-purple">
-          <Sparkle /> Duo AI · adaptive tutor
-        </div>
-        <h1 className="text-[28px] font-extrabold leading-tight text-ink">Duo studies your mistakes and rewrites your practice.</h1>
-        <p className="mt-1 text-muted">
-          A team of agents (OpenAI Agents SDK) analyses every answer you give, finds the misconception behind it, plans a
-          session and writes new exercises grounded in what you&apos;ve learned.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          <Chip color={data.agents_enabled ? "#58CC02" : "#FF9600"}>{data.agents_enabled ? `agents on · ${data.model}` : "rules fallback (no API key)"}</Chip>
-          <Chip color="#1CB0F6">{data.budget_left} agent runs left today</Chip>
-          {data.running && <Chip color="#CE82FF">running now…</Chip>}
+    <section className="card p-5">
+      <div className="flex items-center gap-3">
+        <Mascot size={56} animate={false} />
+        <div>
+          <h2 className="text-xl font-extrabold text-ink">How Duo learns from your mistakes</h2>
+          <p className="text-sm text-muted">This repeats after every lesson. Below is exactly what happened the last time.</p>
         </div>
       </div>
-      <button className="btn btn-purple w-full sm:w-auto" onClick={rerun} disabled={busy || data.running}>
-        {data.running ? "Thinking…" : "Re-analyse now"}
-      </button>
-    </div>
+      <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((s, i) => (
+          <li key={s.title} className="rounded-xl bg-surface-2 p-3">
+            <div className="flex items-center gap-2 font-extrabold text-ink">
+              <span className="text-xl">{s.icon}</span> {i + 1}. {s.title}
+            </div>
+            <p className="mt-1 text-[13px] leading-snug text-muted">{s.body}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
-function Chip({ children, color }: { children: React.ReactNode; color: string }) {
-  return (
-    <span className="rounded-full border-2 px-2.5 py-0.5 font-extrabold" style={{ borderColor: color, color }}>
-      {children}
-    </span>
-  );
-}
+/* ------------------------------------------------------------------ try it */
 
-function ReviewerPanel({ data }: { data: Brain }) {
+function TryIt({ data, onInjected }: { data: Brain; onInjected: () => void }) {
   const invalidate = useInvalidateLearner();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  const [last, setLast] = useState<{ profile: string; examples: { answer: string; correct: string; error_type: string }[] } | null>(null);
+  const [rerunning, setRerunning] = useState(false);
+  const [last, setLast] = useState<{ label: string; injected: number; examples: { answer: string; correct: string }[] } | null>(null);
 
-  const inject = async (profile: string) => {
-    setBusy(profile);
+  const inject = async (key: string, label: string) => {
+    setBusy(key);
     try {
-      const r = await post<{ profile: string; injected: number; examples: { answer: string; correct: string; error_type: string }[] }>(
-        "/tutor/simulate",
-        { profile },
-      );
-      setLast(r);
-      toast({ title: `Injected ${r.injected} mistakes`, body: "The agents are re-planning. Watch the timeline below.", icon: "🧪", tone: "purple" });
+      const r = await post<{ injected: number; examples: { answer: string; correct: string }[] }>("/tutor/simulate", { profile: key });
+      setLast({ label, ...r });
       invalidate();
+      onInjected();
     } catch (e) {
-      toast({ title: "Couldn't inject", body: (e as Error).message, icon: "⚠️", tone: "red" });
+      toast({ title: "Couldn't add mistakes", body: (e as Error).message, icon: "⚠️", tone: "red" });
     } finally {
       setBusy(null);
     }
   };
 
+  const rerun = async () => {
+    setRerunning(true);
+    try {
+      await post("/tutor/plan", { focus: [] });
+      invalidate();
+      onInjected();
+    } finally {
+      setRerunning(false);
+    }
+  };
+
+  const disabled = !!busy || data.running;
   return (
     <section className="rounded-2xl border-2 border-dashed border-duo-purple p-5">
-      <div className="text-sm font-extrabold uppercase tracking-wide text-duo-purple">🧪 For reviewers: test the adaptation live</div>
-      <p className="mt-1 text-[15px] text-muted">
-        This learner was seeded with sample history (mostly el/la mistakes and missing accents). Pick a different
-        behaviour below: it injects ~14 realistic wrong answers derived from real exercises, through the same grader
-        and learner model as live answers, and re-runs the agents. You can also{" "}
-        <Link href="/learn" className="text-duo-blue">do a real lesson</Link> and get things wrong on purpose.
-      </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl">
+          <h3 className="text-lg font-extrabold text-ink">🧪 Test it: give Duo new mistakes</h3>
+          <p className="mt-1 text-sm text-muted">
+            Pick a kind of learner. We add ~14 realistic wrong answers (graded like real ones) and Duo re-analyses.
+            Then check whether the diagnosis and new practice below match what you picked. You can also{" "}
+            <Link href="/learn" className="font-bold text-duo-blue">do a real lesson</Link> and make mistakes on purpose.
+          </p>
+        </div>
+        <button className="btn btn-white h-10 px-4 text-[13px]" onClick={rerun} disabled={rerunning || data.running}>
+          {data.running ? "Duo is thinking…" : "Re-analyse now"}
+        </button>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
         {data.profiles.map((p) => (
           <button
             key={p.key}
-            disabled={!!busy || data.running}
-            onClick={() => inject(p.key)}
-            className="tile flex flex-col items-start p-3 text-left disabled:opacity-60"
+            disabled={disabled}
+            onClick={() => inject(p.key, p.label)}
+            title={p.description}
+            className="tile px-4 py-2 text-sm font-extrabold text-ink disabled:opacity-50"
           >
-            <span className="font-extrabold text-ink">{busy === p.key ? "Injecting…" : p.label}</span>
-            <span className="text-xs text-muted">{p.description}</span>
+            {busy === p.key ? "Adding…" : p.label}
           </button>
         ))}
       </div>
-      {last && last.examples.length > 0 && (
-        <div className="mt-3 text-xs text-muted">
-          Sample injected answers:{" "}
-          {last.examples.map((e, i) => (
-            <span key={i} className="mr-2">
-              <span className="text-duo-red-dark line-through">{e.answer}</span> → <span className="text-duo-green-dark">{e.correct}</span>
+      {last && (
+        <div className="mt-3 rounded-xl bg-surface-2 p-3 text-sm">
+          <b className="text-ink">Added {last.injected} “{last.label}” mistakes</b>
+          {last.examples.length > 0 && (
+            <span className="text-muted">
+              , e.g.{" "}
+              {last.examples.slice(0, 3).map((e, i) => (
+                <span key={i} className="mr-2 whitespace-nowrap">
+                  <span className="text-duo-red-dark line-through">{e.answer}</span> → <span className="text-duo-green-dark">{e.correct}</span>
+                </span>
+              ))}
             </span>
+          )}
+          <div className="mt-1 text-muted">{data.running ? "Duo is re-analysing. Steps below fill in live (about 30s)." : "Done. See the update below."}</div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ story */
+
+/** Steps fill in order as the pipeline persists them: diagnosis, then plan, then exercises. */
+function stepStates(plan: PlanView): string[] {
+  const done = [!!plan.diagnosis, plan.items.length > 0, !!plan.exercises?.length];
+  const active = plan.status === "pending" ? "working" : plan.status === "failed" ? "failed" : "done";
+  let blocked = false;
+  return done.map((ok) => {
+    if (ok && !blocked) return "done";
+    if (blocked) return active === "working" ? "waiting" : active === "failed" ? "skipped" : "done";
+    blocked = true;
+    return active;
+  });
+}
+
+function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; names: Names; latest?: boolean }) {
+  const pending = plan.status === "pending";
+  const failed = plan.status === "failed";
+  const d = plan.diagnosis;
+  const [s2, s3, s4] = stepStates(plan);
+
+  return (
+    <section className={`card overflow-hidden ${pending ? "border-duo-purple" : ""}`}>
+      <header className="flex flex-wrap items-center gap-3 border-b-2 border-line px-5 py-4">
+        <Mascot size={44} mood={pending ? "think" : "happy"} animate={pending} />
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-extrabold uppercase tracking-wide text-duo-purple">
+            {latest ? "Latest update" : "Update"} · {when(plan.created_at)}
+          </div>
+          <div className="text-[17px] font-extrabold text-ink">
+            {pending ? "Duo is analysing your answers…" : `Duo updated your practice because ${triggerLabel(plan.trigger, data.profiles)}`}
+          </div>
+        </div>
+        <EngineBadge plan={plan} />
+      </header>
+
+      <div className="px-5 py-5">
+        <Step n={1} title="What Duo saw" subtitle="Your recent wrong answers, sorted by type of mistake" state="done">
+          <Evidence data={data} patterns={d?.error_patterns || []} latest={latest} />
+        </Step>
+
+        <Step
+          n={2}
+          title="What Duo concluded"
+          subtitle="The topics behind those mistakes, and the likely reason"
+          state={s2}
+          working="The analyst is reading your answers…"
+        >
+          {d && <Diagnosis plan={plan} data={data} names={names} latest={latest} />}
+        </Step>
+
+        <Step
+          n={3}
+          title="What Duo changed"
+          subtitle="Which topics you'll practise, and how"
+          state={s3}
+          working="The planner is choosing topics and exercise types…"
+        >
+          {plan.items.length > 0 && <PlanItems plan={plan} names={names} />}
+        </Step>
+
+        <Step
+          n={4}
+          title="Your new practice"
+          subtitle={
+            plan.exercise_count
+              ? `${plan.exercise_count} exercises: ${plan.generated_count} written by AI for you, ${plan.seeded_count} picked from the course`
+              : "New exercises for you"
+          }
+          state={s4}
+          working="The writer is creating exercises and checking each one…"
+          last
+        >
+          {plan.exercises && plan.exercises.length > 0 && <Exercises plan={plan} names={names} />}
+        </Step>
+
+        {failed && <p className="ml-12 text-sm text-duo-red">This update failed: {plan.error}</p>}
+        <UnderTheHood plan={plan} />
+      </div>
+    </section>
+  );
+}
+
+function EngineBadge({ plan }: { plan: PlanView }) {
+  const ai = plan.engine === "agents";
+  return (
+    <span
+      title={ai ? "Diagnosed and written by OpenAI agents" : "No AI available: a rules engine picked course exercises"}
+      className={`rounded-full px-3 py-1 text-xs font-extrabold text-white ${ai ? "bg-duo-purple" : "bg-duo-orange"}`}
+    >
+      {ai ? "AI agents" : "Rules fallback"}
+    </span>
+  );
+}
+
+function Step({
+  n,
+  title,
+  subtitle,
+  state,
+  working,
+  last,
+  children,
+}: {
+  n: number;
+  title: string;
+  subtitle: string;
+  state: string;
+  working?: string;
+  last?: boolean;
+  children?: React.ReactNode;
+}) {
+  const color = { done: "bg-duo-green", working: "bg-duo-purple", waiting: "bg-faint", skipped: "bg-faint" }[state] || "bg-duo-red";
+  return (
+    <div className="relative flex gap-4">
+      <div className="flex flex-col items-center">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-white ${color} ${state === "working" ? "animate-pulse" : ""}`}>
+          {state === "failed" ? "!" : state === "working" ? "…" : n}
+        </span>
+        {!last && <span className="w-0.5 flex-1 bg-line" />}
+      </div>
+      <div className={`min-w-0 flex-1 ${last ? "" : "pb-7"}`}>
+        <h3 className="text-[17px] font-extrabold leading-8 text-ink">{title}</h3>
+        <p className="mb-3 text-sm text-muted">{subtitle}</p>
+        {state === "working" ? (
+          <div className="flex items-center gap-2 rounded-xl bg-surface-2 p-3 text-sm text-duo-purple">
+            <span className="animate-pulse">●</span> {working}
+          </div>
+        ) : state === "waiting" || state === "skipped" ? (
+          <div className="rounded-xl bg-surface-2 p-3 text-sm text-faint">{state === "waiting" ? "Waiting for the previous step…" : "Skipped"}</div>
+        ) : (
+          children
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Evidence({ data, patterns, latest }: { data: Brain; patterns: string[]; latest?: boolean }) {
+  const eb = data.error_breakdown;
+  const errors = Object.entries(eb.errors_by_type).sort((a, b) => b[1] - a[1]);
+  const total = errors.reduce((s, [, n]) => s + n, 0);
+  return (
+    <div className="space-y-3">
+      {latest && errors.length > 0 && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {errors.map(([k, n]) => (
+              <span key={k} className="rounded-full bg-surface-2 px-3 py-1 text-sm">
+                <b className="text-ink">{n}×</b> <span className="text-muted">{ERROR_LABEL[k] || k}</span>
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-muted">
+            {total} mistakes in your last {eb.attempts_analysed} answers. You get <b className="text-ink">{pct(eb.accuracy_recognition)}</b> right when
+            choosing from options and <b className="text-ink">{pct(eb.accuracy_production)}</b> when typing or building sentences.
+          </p>
+        </>
+      )}
+      {patterns.length > 0 && (
+        <ul className="space-y-1 text-sm text-ink">
+          {patterns.map((p, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="text-duo-purple">•</span> {p}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Diagnosis({ plan, data, names, latest }: { plan: PlanView; data: Brain; names: Names; latest?: boolean }) {
+  const d = plan.diagnosis!;
+  const mastery = Object.fromEntries(data.mastery.map((m) => [m.concept_key, m]));
+  return (
+    <div className="space-y-3">
+      {d.overall_summary && <p className="text-[15px] text-ink">{d.overall_summary}</p>}
+      {d.weak_concepts.map((w) => {
+        const sev = SEVERITY[w.severity] || SEVERITY.low;
+        const examples = latest ? evidenceFor(w.concept_key, data.recent_mistakes) : [];
+        const m = mastery[w.concept_key];
+        return (
+          <div key={w.concept_key} className="rounded-xl border-2 border-line p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[16px] font-extrabold text-ink">{names[w.concept_key] || humanize(w.concept_key)}</span>
+              <span className="rounded-md px-2 py-0.5 text-[11px] font-extrabold uppercase text-white" style={{ background: sev.color }}>
+                {sev.label}
+              </span>
+              {m && <span className="ml-auto text-xs text-muted">mastery {Math.round(m.mastery * 100)}%</span>}
+            </div>
+            <dl className="mt-2 grid gap-1.5 text-sm sm:grid-cols-[110px_1fr]">
+              <dt className="font-bold text-muted">Struggles</dt>
+              <dd className="text-ink">{MODE[w.weakness_mode] || w.weakness_mode}</dd>
+              <dt className="font-bold text-muted">Evidence</dt>
+              <dd className="text-ink">{w.evidence}</dd>
+              {w.likely_misconception && (
+                <>
+                  <dt className="font-bold text-muted">Likely reason</dt>
+                  <dd className="text-ink">{w.likely_misconception}</dd>
+                </>
+              )}
+            </dl>
+            {examples.length > 0 && (
+              <div className="mt-3 border-t-2 border-line pt-2">
+                <div className="mb-1 text-xs font-bold uppercase text-muted">Mistakes that led here</div>
+                <div className="space-y-1">
+                  {examples.map((ex) => (
+                    <MistakeLine key={ex.attempt_id} m={ex} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {d.strengths.length > 0 && (
+        <p className="text-sm text-muted">
+          <span className="font-bold text-duo-green-dark">Doing well:</span> {d.strengths.map((s) => names[s] || humanize(s)).join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MistakeLine({ m }: { m: Mistake }) {
+  const simulated = m.learner_answer === "(simulated)" || !m.learner_answer;
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+      <span className="text-muted">“{m.task}”</span>
+      {!simulated && <span className="text-duo-red-dark line-through">{m.learner_answer}</span>}
+      <span className="text-duo-green-dark">→ {m.correct_answer}</span>
+      {m.error_type && <span className="rounded bg-surface-2 px-1.5 text-[11px] text-muted">{ERROR_LABEL[m.error_type] || m.error_type}</span>}
+      {(simulated || m.sample) && <span className="text-[11px] text-faint">sample data</span>}
+    </div>
+  );
+}
+
+function PlanItems({ plan, names }: { plan: PlanView; names: Names }) {
+  return (
+    <div className="space-y-2">
+      {plan.strategy && <p className="text-[15px] text-ink">{plan.strategy}</p>}
+      {plan.items.map((it) => (
+        <div key={it.concept_key} className="flex gap-3 rounded-xl bg-surface-2 p-3 text-sm">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-duo-blue text-base font-extrabold text-white">
+            {it.exercise_count}×
+          </span>
+          <div className="min-w-0">
+            <div className="font-extrabold text-ink">
+              {names[it.concept_key] || humanize(it.concept_key)}
+              <span className="font-normal text-muted"> · {it.exercise_types.map((t) => TYPE_LABEL[t] || t).join(", ")}</span>
+            </div>
+            <div className="text-muted">{it.reason}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Exercises({ plan, names }: { plan: PlanView; names: Names }) {
+  const [all, setAll] = useState(false);
+  const list = plan.exercises || [];
+  const shown = all ? list : list.slice(0, 4);
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 md:grid-cols-2">
+        {shown.map((e) => (
+          <div key={e.id} className="rounded-xl border-2 border-line p-3 text-sm">
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`rounded px-1.5 py-0.5 font-extrabold text-white ${e.source === "agent" ? "bg-duo-purple" : "bg-faint"}`}>
+                {e.source === "agent" ? "Written by AI" : "From the course"}
+              </span>
+              <span className="text-muted">{TYPE_LABEL[e.type] || e.type}</span>
+              <span className="ml-auto truncate text-faint">{e.concepts.map((c) => names[c] || humanize(c)).join(", ")}</span>
+            </div>
+            <div className="mt-2 text-ink">{previewText(e.type, e.preview)}</div>
+            <div className="text-duo-green-dark">✓ {e.answer}</div>
+            {e.rationale && <div className="mt-1 text-xs text-muted">Why this one: {e.rationale}</div>}
+          </div>
+        ))}
+      </div>
+      {list.length > 4 && (
+        <button className="block text-sm font-extrabold uppercase text-duo-blue" onClick={() => setAll((a) => !a)}>
+          {all ? "Show fewer" : `Show all ${list.length}`}
+        </button>
+      )}
+      {plan.validation_errors.length > 0 && (
+        <p className="text-xs text-muted">
+          🛡️ {plan.validation_errors.length} AI-written exercise(s) failed the automatic check and were fixed or replaced before reaching you.
+        </p>
+      )}
+      {plan.status === "ready" && (
+        <Link href="/practice?mode=personalized" className="btn btn-purple mt-2 w-full sm:w-auto">
+          Start this practice
+        </Link>
+      )}
+      {plan.status === "consumed" && <p className="text-sm text-muted">✅ You already did this practice.</p>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ engineering detail */
+
+const STEP_ORDER = ["Learner Analyst", "Curriculum Planner", "Exercise Generator", "Rules Engine"];
+const STEP_PLAIN: Record<string, string> = {
+  "Learner Analyst": "Analyst (step 2)",
+  "Curriculum Planner": "Planner (step 3)",
+  "Exercise Generator": "Writer (step 4)",
+  "Rules Engine": "Rules engine (steps 2-4)",
+};
+
+function UnderTheHood({ plan }: { plan: PlanView }) {
+  const [open, setOpen] = useState(false);
+  const steps = (plan.runs || [])
+    .filter((r) => r.kind === "step")
+    .sort((a, b) => STEP_ORDER.indexOf(a.agent) - STEP_ORDER.indexOf(b.agent) || a.id - b.id);
+  const root = (plan.runs || []).find((r) => r.kind === "pipeline");
+  if (!steps.length) return null;
+  return (
+    <div className="ml-12 mt-5 border-t-2 border-line pt-3">
+      <button className="text-sm font-extrabold uppercase text-muted hover:text-ink" onClick={() => setOpen((o) => !o)}>
+        {open ? "▾" : "▸"} Under the hood (agent runs, tools, tokens)
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+            <p className="mt-2 text-xs text-muted">
+              OpenAI Agents SDK · {root?.model || "model"} · total {root ? (root.latency_ms / 1000).toFixed(1) : "?"}s. Each agent reads your data
+              only through tools and must return a typed (Pydantic) result. Click a run to see it.
+            </p>
+            <div className="mt-3 space-y-2">
+              {steps.map((r) => (
+                <RunRow key={r.id} run={r} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function RunRow({ run }: { run: AgentRun }) {
+  const [show, setShow] = useState(false);
+  const ok = run.status === "ok";
+  return (
+    <div className="rounded-xl bg-surface-2 p-3 text-sm">
+      <button className="flex w-full flex-wrap items-center gap-2 text-left" onClick={() => setShow((s) => !s)}>
+        <span className={`h-2.5 w-2.5 rounded-full ${ok ? "bg-duo-green" : run.status === "running" ? "bg-duo-purple" : "bg-duo-orange"}`} />
+        <span className="font-extrabold text-ink">{STEP_PLAIN[run.agent] || run.agent}</span>
+        <span className="text-xs text-muted">
+          {run.status} · {(run.latency_ms / 1000).toFixed(1)}s · {run.input_tokens + run.output_tokens} tokens
+        </span>
+        <span className="flex flex-wrap gap-1">
+          {run.tool_calls.map((t, i) => (
+            <span key={i} className="rounded bg-surface px-1.5 font-mono text-[11px] text-muted">
+              {t.tool}()
+            </span>
+          ))}
+        </span>
+        <span className="ml-auto text-xs text-duo-blue">{show ? "hide" : "output"}</span>
+      </button>
+      {show && (
+        <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-surface p-2 text-[11px] leading-snug text-muted">
+          {run.error ? `ERROR: ${run.error}\n\n` : ""}
+          {JSON.stringify(run.output, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ learner model + history */
+
+function LearnerModel({ data }: { data: Brain }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="card p-5">
+      <button className="flex w-full items-center justify-between text-left" onClick={() => setOpen((o) => !o)}>
+        <div>
+          <h3 className="text-lg font-extrabold text-ink">Everything Duo tracks about you</h3>
+          <p className="text-sm text-muted">A score per topic, updated instantly after every answer (no AI needed). The agents start from this.</p>
+        </div>
+        <span className="text-faint">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-4 grid gap-x-8 gap-y-3 md:grid-cols-2">
+          {data.mastery.map((m) => (
+            <MasteryRow key={m.concept_key} m={m} />
           ))}
         </div>
       )}
@@ -167,66 +649,16 @@ function ReviewerPanel({ data }: { data: Brain }) {
   );
 }
 
-function WhatDuoSees({ data }: { data: Brain }) {
-  const errors = Object.entries(data.error_breakdown.errors_by_type);
-  const maxErr = Math.max(1, ...errors.map(([, n]) => n));
-  return (
-    <section className="grid gap-5 lg:grid-cols-2">
-      <div className="card p-5">
-        <h3 className="mb-1 text-lg font-extrabold text-ink">Learner model</h3>
-        <p className="mb-4 text-xs text-muted">
-          Per-concept mastery, updated deterministically on every answer. R = recognition (choosing), P = production (typing/building).
-        </p>
-        <div className="space-y-3">
-          {data.mastery.map((m) => (
-            <MasteryRow key={m.concept_key} m={m} />
-          ))}
-        </div>
-      </div>
-      <div className="space-y-5">
-        <div className="card p-5">
-          <h3 className="mb-3 text-lg font-extrabold text-ink">Error types (last {data.error_breakdown.attempts_analysed} answers)</h3>
-          <div className="space-y-2">
-            {errors.map(([k, n]) => (
-              <div key={k} className="flex items-center gap-3 text-sm">
-                <span className="w-40 shrink-0 text-muted">{ERROR_LABEL[k] || k}</span>
-                <div className="h-3 flex-1 rounded-full bg-line">
-                  <div className="h-3 rounded-full bg-duo-red" style={{ width: `${(n / maxErr) * 100}%` }} />
-                </div>
-                <span className="w-6 text-right text-ink">{n}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex gap-4 text-sm text-muted">
-            <span>Recognition accuracy: <b className="text-ink">{pct(data.error_breakdown.accuracy_recognition)}</b></span>
-            <span>Production accuracy: <b className="text-ink">{pct(data.error_breakdown.accuracy_production)}</b></span>
-          </div>
-        </div>
-        <div className="card p-5">
-          <h3 className="mb-3 text-lg font-extrabold text-ink">Recent mistakes</h3>
-          <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1">
-            {data.recent_mistakes.map((m) => (
-              <MistakeRow key={m.attempt_id} m={m} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
-
 function MasteryRow({ m }: { m: Mastery }) {
   const color = m.mastery < 0.35 ? "#FF4B4B" : m.mastery < 0.55 ? "#FF9600" : m.mastery < 0.8 ? "#1CB0F6" : "#58CC02";
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-ink">
-          {m.name} {m.due_for_review && <span className="ml-1 rounded bg-duo-yellow px-1 text-[10px] text-white">REVIEW</span>}
+          {m.name} {m.due_for_review && <span className="ml-1 rounded bg-duo-yellow px-1 text-[10px] text-white">REVIEW DUE</span>}
         </span>
-        <span className="text-xs text-muted">
-          R {pct(m.recognition_accuracy)} · P {pct(m.production_accuracy)} · {m.attempts} tries
+        <span className="text-xs text-muted" title="Accuracy when choosing / when typing">
+          choose {pct(m.recognition_accuracy)} · type {pct(m.production_accuracy)}
         </span>
       </div>
       <div className="mt-1 h-2.5 rounded-full bg-line">
@@ -236,205 +668,24 @@ function MasteryRow({ m }: { m: Mastery }) {
   );
 }
 
-function MistakeRow({ m }: { m: Mistake }) {
-  const simulated = m.learner_answer === "(simulated)";
+function OlderPlan({ plan, data, names }: { plan: PlanView; data: Brain; names: Names }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl bg-surface-2 p-3 text-sm">
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-muted">{m.task}</span>
-        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-white ${m.typo_only ? "bg-duo-orange" : "bg-duo-red"}`}>
-          {ERROR_LABEL[m.error_type || ""] || m.error_type}
-        </span>
-      </div>
-      <div className="mt-1">
-        {simulated ? (
-          <span className="text-faint">seeded sample mistake</span>
-        ) : (
-          <span className="text-duo-red-dark line-through">{m.learner_answer}</span>
-        )}{" "}
-        → <span className="text-duo-green-dark">{m.correct_answer}</span>
-        {m.sample && !simulated && <span className="ml-2 text-[11px] text-faint">(sample data)</span>}
-      </div>
-    </div>
-  );
-}
-
-function PlanCardView({ plan, defaultOpen }: { plan: PlanView; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const steps = (plan.runs || []).filter((r) => r.kind === "step").sort((a, b) => STEP_ORDER.indexOf(a.agent) - STEP_ORDER.indexOf(b.agent) || a.id - b.id);
-  const root = (plan.runs || []).find((r) => r.kind === "pipeline");
-  const pending = plan.status === "pending";
-  return (
-    <div className={`card overflow-hidden ${pending ? "border-duo-purple" : ""}`}>
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-4 p-5 text-left">
-        <Mascot size={52} animate={pending} mood={pending ? "think" : "happy"} />
+    <div>
+      <button onClick={() => setOpen((o) => !o)} className="card flex w-full items-center gap-3 p-4 text-left">
+        <span className="text-faint">{open ? "▾" : "▸"}</span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Chip color={plan.engine === "agents" ? "#CE82FF" : "#FF9600"}>{plan.engine === "agents" ? "multi-agent" : "rules fallback"}</Chip>
-            <Chip color={pending ? "#CE82FF" : plan.status === "ready" ? "#58CC02" : "#AFAFAF"}>{plan.status}</Chip>
-            <span className="text-muted">trigger: {plan.trigger.replace("_", " ")} · {new Date(plan.created_at + "Z").toLocaleTimeString()}</span>
-            {root && <span className="text-muted">· {(root.latency_ms / 1000).toFixed(1)}s</span>}
+          <div className="text-xs text-muted">
+            {when(plan.created_at)} · because {triggerLabel(plan.trigger, data.profiles)}
           </div>
-          <div className="mt-1 text-[16px] text-ink">{pending ? "Agents are working on it…" : plan.summary || plan.error}</div>
+          <div className="truncate text-[15px] text-ink">{plan.summary || plan.error || plan.status}</div>
         </div>
-        <span className="text-faint">{open ? "▲" : "▼"}</span>
+        <EngineBadge plan={plan} />
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-            <div className="space-y-5 border-t-2 border-line p-5">
-              <Pipeline steps={steps} pending={pending} engine={plan.engine} />
-              {plan.diagnosis && <DiagnosisView plan={plan} />}
-              {plan.items.length > 0 && <PlanItems plan={plan} />}
-              {plan.exercises && plan.exercises.length > 0 && <GeneratedExercises plan={plan} />}
-              {plan.status === "ready" && (
-                <Link href="/practice?mode=personalized" className="btn btn-purple w-full">
-                  Start this practice ({plan.exercise_count})
-                </Link>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function Pipeline({ steps, pending, engine }: { steps: AgentRun[]; pending: boolean; engine: string }) {
-  const expected = engine === "rules" ? ["Rules Engine"] : ["Learner Analyst", "Curriculum Planner", "Exercise Generator"];
-  return (
-    <div>
-      <div className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">Pipeline</div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {expected.map((name, i) => {
-          const runs = steps.filter((s) => s.agent === name);
-          const run = runs[runs.length - 1];
-          return <StepCard key={name} name={name} run={run} retries={runs.length - 1} index={i} pending={pending} />;
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StepCard({ name, run, retries, index, pending }: { name: string; run?: AgentRun; retries: number; index: number; pending: boolean }) {
-  const [show, setShow] = useState(false);
-  const state = run ? run.status : pending ? "waiting" : "skipped";
-  const color = state === "ok" ? "#58CC02" : state === "running" ? "#CE82FF" : state === "error" || state === "blocked" ? "#FF4B4B" : state === "fallback" ? "#FF9600" : "#AFAFAF";
-  return (
-    <div className="rounded-xl border-2 p-3" style={{ borderColor: color }}>
-      <div className="flex items-center gap-2">
-        <span className="text-xl">{STEP_ICON[name]}</span>
-        <div className="flex-1">
-          <div className="text-[15px] font-extrabold text-ink">{index + 1}. {name}</div>
-          <div className="text-xs" style={{ color }}>
-            {state === "running" ? <span className="animate-pulse">running…</span> : state}
-            {run && run.status !== "running" && ` · ${(run.latency_ms / 1000).toFixed(1)}s · ${run.input_tokens + run.output_tokens} tok`}
-            {retries > 0 && ` · ${retries} repair round`}
-          </div>
+      {open && (
+        <div className="mt-2">
+          <Story plan={plan} data={data} names={names} />
         </div>
-        {run && run.status !== "running" && (
-          <button className="text-xs font-extrabold uppercase text-duo-blue" onClick={() => setShow((s) => !s)}>
-            {show ? "hide" : "details"}
-          </button>
-        )}
-      </div>
-      {run && run.tool_calls.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {run.tool_calls.map((t, i) => (
-            <span key={i} className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
-              🔧 {t.tool}()
-            </span>
-          ))}
-        </div>
-      )}
-      {show && run && (
-        <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-surface-2 p-2 text-[11px] leading-snug text-muted">
-          {run.error ? `ERROR: ${run.error}\n\n` : ""}
-          {JSON.stringify(run.output, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
-
-function DiagnosisView({ plan }: { plan: PlanView }) {
-  const d = plan.diagnosis!;
-  return (
-    <div>
-      <div className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">
-        Diagnosis {typeof d.confidence === "number" && <span className="normal-case">· confidence {Math.round(d.confidence * 100)}%</span>}
-      </div>
-      {d.overall_summary && <p className="mb-3 text-[15px] text-ink">{d.overall_summary}</p>}
-      <div className="grid gap-2 md:grid-cols-2">
-        {d.weak_concepts.map((w) => (
-          <div key={w.concept_key} className="rounded-xl bg-surface-2 p-3 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-extrabold text-ink">{w.concept_key}</span>
-              <span className={`rounded px-1.5 text-[11px] text-white ${w.severity === "high" ? "bg-duo-red" : w.severity === "medium" ? "bg-duo-orange" : "bg-duo-yellow"}`}>
-                {w.severity}
-              </span>
-              <span className="rounded bg-duo-blue px-1.5 text-[11px] text-white">{w.weakness_mode}</span>
-            </div>
-            <div className="mt-1 text-muted">{w.evidence}</div>
-            {w.likely_misconception && <div className="mt-1 text-ink">💡 {w.likely_misconception}</div>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PlanItems({ plan }: { plan: PlanView }) {
-  return (
-    <div>
-      <div className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">Plan</div>
-      {plan.strategy && <p className="mb-2 text-[15px] italic text-ink">{plan.strategy}</p>}
-      <div className="space-y-2">
-        {plan.items.map((it) => (
-          <div key={it.concept_key} className="flex flex-col gap-1 rounded-xl bg-surface-2 p-3 text-sm sm:flex-row sm:items-center sm:gap-3">
-            <span className="font-extrabold text-ink">{it.concept_key}</span>
-            <span className="text-muted">×{it.exercise_count} · {it.exercise_types.join(", ")} · lvl {it.difficulty}</span>
-            <span className="text-muted sm:ml-auto sm:max-w-[50%] sm:text-right">{it.reason}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GeneratedExercises({ plan }: { plan: PlanView }) {
-  return (
-    <div>
-      <div className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">
-        Exercises · {plan.generated_count} written by the generator, {plan.seeded_count} picked from the course
-      </div>
-      <div className="grid gap-2 md:grid-cols-2">
-        {plan.exercises!.map((e) => (
-          <div key={e.id} className="rounded-xl border-2 border-line p-3 text-sm">
-            <div className="flex items-center gap-2">
-              <span className={`rounded px-1.5 text-[11px] text-white ${e.source === "agent" ? "bg-duo-purple" : "bg-faint"}`}>
-                {e.source === "agent" ? "AI-written" : "course"}
-              </span>
-              <span className="text-muted">{e.type.replace("_", " ")}</span>
-              <span className="ml-auto truncate text-xs text-faint">{e.concepts.join(", ")}</span>
-            </div>
-            <div className="mt-1 text-ink">{previewText(e.type, e.preview)}</div>
-            <div className="text-duo-green-dark">✓ {e.answer}</div>
-            {e.rationale && <div className="mt-1 text-xs text-muted">Why: {e.rationale}</div>}
-          </div>
-        ))}
-      </div>
-      {plan.validation_errors.length > 0 && (
-        <details className="mt-3 text-sm text-muted">
-          <summary className="cursor-pointer font-extrabold text-duo-orange">
-            🛡️ Validator rejected {plan.validation_errors.length} generated item(s)
-          </summary>
-          <ul className="mt-2 list-disc pl-5">
-            {plan.validation_errors.map((v, i) => (
-              <li key={i}>{v}</li>
-            ))}
-          </ul>
-        </details>
       )}
     </div>
   );
