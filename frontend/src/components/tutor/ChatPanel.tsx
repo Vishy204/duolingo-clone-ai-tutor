@@ -13,7 +13,7 @@ const SUGGESTIONS = [
   "Is 'hola amigo' correct?",
   "What should I practise?",
   "When do I use el vs la?",
-  "Make me a practice on verbs",
+  "Make me a practice on animal names",
 ];
 
 export default function ChatPanel() {
@@ -64,7 +64,13 @@ export default function ChatPanel() {
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {messages.length === 0 && !pending && (
-          <div className="text-center text-sm text-muted">Ask anything about your Spanish. Try one of these:</div>
+          <Bubble
+            m={{
+              role: "assistant",
+              content:
+                "Hi! I'm Smarto. I can check your Spanish, explain grammar, and create custom exercises on anything you want. They show up in the Custom Practice tab. Try one of these:",
+            }}
+          />
         )}
         {messages.map((m, i) => (
           <Bubble key={i} m={m} />

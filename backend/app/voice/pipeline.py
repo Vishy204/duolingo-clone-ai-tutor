@@ -61,7 +61,8 @@ What you know about this learner right now:
 def greeting(name: str) -> str:
     """Spoken straight to text-to-speech the moment the pipeline starts: no LLM round-trip, so the
     learner hears Smarto almost immediately after tapping the mic."""
-    return f"Hi {name or 'there'}! Say a Spanish phrase and I'll tell you if it's right."
+    return (f"Hi {name or 'there'}! Say a Spanish phrase and I'll tell you if it's right. "
+            "I can also create custom exercises on anything you want.")
 
 
 def learner_profile(user_id: int) -> tuple[str, str]:
