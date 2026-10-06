@@ -2,8 +2,8 @@
 
 Security: the browser can't set headers on a WebSocket, so it first exchanges its JWT (sent as a
 normal Authorization header) for a single-use 60s ticket, and only the ticket goes in the URL.
-Origins are restricted to the frontend, each learner gets one live session at a time, and sessions
-are capped in length and per day.
+Origins are restricted to the frontend, each learner gets one live session at a time (a new one
+replaces a stale one, e.g. after navigating away), and sessions are capped in length and per day.
 """
 import asyncio
 import re
@@ -24,7 +24,7 @@ from app.models import AgentRun, User
 from app.voice.config import load_voice_config
 
 router = APIRouter(prefix="/voice")
-_live: set[int] = set()
+_live: dict[int, WebSocket] = {}
 # Single-use, short-lived tickets: the WebSocket URL never carries the long-lived JWT (URLs end up in
 # access logs). In-memory is fine for one instance; move to Redis when scaling out.
 _tickets: dict[str, tuple[int, float]] = {}
@@ -64,9 +64,6 @@ def status(user: User = Depends(current_user), db: Session = Depends(get_db)):
         return {"enabled": False}
     return {
         "enabled": True,
-        "llm": f"{cfg.llm_provider}/{cfg.llm_model}",
-        "stt": f"deepgram/{cfg.stt_model}",
-        "tts": f"deepgram/{cfg.tts_voice}",
         "max_session_secs": cfg.max_session_secs,
         "sessions_left_today": max(0, cfg.daily_sessions - _sessions_today(db, user.id)),
     }
@@ -92,14 +89,27 @@ async def voice_ws(websocket: WebSocket, ticket: str = ""):
     origin_ok = not origin or origin in s.cors_origin_list or (
         s.cors_origin_regex and re.fullmatch(s.cors_origin_regex, origin)
     )
-    if cfg is None or user_id is None or not origin_ok or user_id in _live:
-        await websocket.close(code=4401 if user_id is None else 4403)
+    # Accept before rejecting so the browser gets a real close code + reason instead of a bare 1006.
+    if cfg is None or user_id is None or not origin_ok:
+        await websocket.accept()
+        reason = ("voice unavailable" if cfg is None
+                  else "session expired, try again" if user_id is None else "origin not allowed")
+        await websocket.close(code=4401 if user_id is None else 4403, reason=reason)
         return
     with SessionLocal() as db:
         user = db.get(User, user_id)
         if user is None or user.is_bot or _sessions_today(db, user_id) >= cfg.daily_sessions:
-            await websocket.close(code=4429)
+            await websocket.accept()
+            await websocket.close(code=4429, reason="daily voice limit reached")
             return
+    # One live session per learner: the newest wins, so a forgotten tab can't lock them out.
+    stale = _live.pop(user_id, None)
+    if stale is not None:
+        try:
+            await stale.close(code=4000, reason="replaced by a new session")
+        except Exception:  # noqa: BLE001
+            pass
+    with SessionLocal() as db:
         run = AgentRun(user_id=user_id, kind="voice", agent_name="Voice Duo", status="running",
                        model=f"{cfg.llm_provider}/{cfg.llm_model}", input_summary="voice session", tool_calls=[])
         db.add(run)
@@ -114,7 +124,7 @@ async def voice_ws(websocket: WebSocket, ticket: str = ""):
     from app.voice.pipeline import build_worker
 
     await websocket.accept()
-    _live.add(user_id)
+    _live[user_id] = websocket
     started = time.perf_counter()
     try:
         transport = FastAPIWebsocketTransport(
@@ -142,7 +152,8 @@ async def voice_ws(websocket: WebSocket, ticket: str = ""):
     except Exception:  # noqa: BLE001
         logger.exception("voice session crashed")
     finally:
-        _live.discard(user_id)
+        if _live.get(user_id) is websocket:
+            del _live[user_id]
         with SessionLocal() as db:
             run = db.get(AgentRun, run_id)
             run.status = "ok"

@@ -1,18 +1,19 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { post } from "@/lib/api";
 import { useBrain, useInvalidateLearner } from "@/lib/hooks";
-import type { AgentRun, Brain, Mastery, Mistake, PlanView } from "@/lib/types";
+import type { Brain, Mastery, Mistake, PlanView } from "@/lib/types";
+import { CircleCheck, FlaskConical, Map as MapIcon, PenLine, Search, ShieldCheck, Target, TriangleAlert } from "lucide-react";
 import Mascot from "../Mascot";
 import { useToast } from "../ui/Toast";
 
 /**
  * "How Duo learns": the latest adaptation told as a story.
  * Your mistakes -> what Duo concluded -> what it changed -> the exercises it wrote.
- * Raw agent traces live in a collapsed "Under the hood" section for engineers.
+ * Agent traces are not shown here; they are stored in agent_runs and visible via /api/v1/tutor/brain.
  */
 
 const ERROR_LABEL: Record<string, string> = {
@@ -141,10 +142,10 @@ export default function TutorBrain() {
 
 function HowItWorks() {
   const steps = [
-    { icon: "✍️", title: "You answer", body: "Every answer is graded and the mistake gets a type: wrong article, missing accent, word order…" },
-    { icon: "🔍", title: "Duo finds the cause", body: "After each lesson an AI analyst reads those mistakes and works out what you misunderstand." },
-    { icon: "🗺️", title: "Duo plans", body: "A planner picks the topics to fix and the exercise types that train them." },
-    { icon: "🎯", title: "Duo writes practice", body: "A writer creates new exercises using only words you've learned. Each one is checked before you see it." },
+    { Icon: PenLine, title: "You answer", body: "Every answer is graded and the mistake gets a type: wrong article, missing accent, word order…" },
+    { Icon: Search, title: "Duo finds the cause", body: "After each lesson Duo reads those mistakes and works out what you misunderstand." },
+    { Icon: MapIcon, title: "Duo plans", body: "Duo picks the topics to fix and the exercise types that train them." },
+    { Icon: Target, title: "Duo writes practice", body: "Duo writes new exercises using only words you've learned, and checks each one before you see it." },
   ];
   return (
     <section className="card p-5">
@@ -159,7 +160,7 @@ function HowItWorks() {
         {steps.map((s, i) => (
           <li key={s.title} className="rounded-xl bg-surface-2 p-3">
             <div className="flex items-center gap-2 font-extrabold text-ink">
-              <span className="text-xl">{s.icon}</span> {i + 1}. {s.title}
+              <s.Icon size={20} strokeWidth={2.5} className="text-duo-blue" /> {i + 1}. {s.title}
             </div>
             <p className="mt-1 text-[13px] leading-snug text-muted">{s.body}</p>
           </li>
@@ -186,7 +187,7 @@ function TryIt({ data, onInjected }: { data: Brain; onInjected: () => void }) {
       invalidate();
       onInjected();
     } catch (e) {
-      toast({ title: "Couldn't add mistakes", body: (e as Error).message, icon: "⚠️", tone: "red" });
+      toast({ title: "Couldn't add mistakes", body: (e as Error).message, icon: <TriangleAlert className="text-duo-red" />, tone: "red" });
     } finally {
       setBusy(null);
     }
@@ -208,7 +209,7 @@ function TryIt({ data, onInjected }: { data: Brain; onInjected: () => void }) {
     <section className="rounded-2xl border-2 border-dashed border-duo-purple p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl">
-          <h3 className="text-lg font-extrabold text-ink">🧪 Test it: give Duo new mistakes</h3>
+          <h3 className="flex items-center gap-2 text-lg font-extrabold text-ink"><FlaskConical size={20} className="text-duo-purple" /> Try it: give Duo new mistakes</h3>
           <p className="mt-1 text-sm text-muted">
             Pick a kind of learner. We add ~14 realistic wrong answers (graded like real ones) and Duo re-analyses.
             Then check whether the diagnosis and new practice below match what you picked. You can also{" "}
@@ -285,7 +286,6 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
             {pending ? "Duo is analysing your answers…" : `Duo updated your practice because ${triggerLabel(plan.trigger, data.profiles)}`}
           </div>
         </div>
-        <EngineBadge plan={plan} />
       </header>
 
       <div className="px-5 py-5">
@@ -298,7 +298,7 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
           title="What Duo concluded"
           subtitle="The topics behind those mistakes, and the likely reason"
           state={s2}
-          working="The analyst is reading your answers…"
+          working="Reading your answers…"
         >
           {d && <Diagnosis plan={plan} data={data} names={names} latest={latest} />}
         </Step>
@@ -308,7 +308,7 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
           title="What Duo changed"
           subtitle="Which topics you'll practise, and how"
           state={s3}
-          working="The planner is choosing topics and exercise types…"
+          working="Choosing topics and exercise types…"
         >
           {plan.items.length > 0 && <PlanItems plan={plan} names={names} />}
         </Step>
@@ -318,32 +318,19 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
           title="Your new practice"
           subtitle={
             plan.exercise_count
-              ? `${plan.exercise_count} exercises: ${plan.generated_count} written by AI for you, ${plan.seeded_count} picked from the course`
+              ? `${plan.exercise_count} exercises: ${plan.generated_count} written just for you, ${plan.seeded_count} picked from the course`
               : "New exercises for you"
           }
           state={s4}
-          working="The writer is creating exercises and checking each one…"
+          working="Writing exercises and checking each one…"
           last
         >
           {plan.exercises && plan.exercises.length > 0 && <Exercises plan={plan} names={names} />}
         </Step>
 
         {failed && <p className="ml-12 text-sm text-duo-red">This update failed: {plan.error}</p>}
-        <UnderTheHood plan={plan} />
       </div>
     </section>
-  );
-}
-
-function EngineBadge({ plan }: { plan: PlanView }) {
-  const ai = plan.engine === "agents";
-  return (
-    <span
-      title={ai ? "Diagnosed and written by OpenAI agents" : "No AI available: a rules engine picked course exercises"}
-      className={`rounded-full px-3 py-1 text-xs font-extrabold text-white ${ai ? "bg-duo-purple" : "bg-duo-orange"}`}
-    >
-      {ai ? "AI agents" : "Rules fallback"}
-    </span>
   );
 }
 
@@ -523,7 +510,7 @@ function Exercises({ plan, names }: { plan: PlanView; names: Names }) {
           <div key={e.id} className="rounded-xl border-2 border-line p-3 text-sm">
             <div className="flex items-center gap-2 text-xs">
               <span className={`rounded px-1.5 py-0.5 font-extrabold text-white ${e.source === "agent" ? "bg-duo-purple" : "bg-faint"}`}>
-                {e.source === "agent" ? "Written by AI" : "From the course"}
+                {e.source === "agent" ? "New for you" : "From the course"}
               </span>
               <span className="text-muted">{TYPE_LABEL[e.type] || e.type}</span>
               <span className="ml-auto truncate text-faint">{e.concepts.map((c) => names[c] || humanize(c)).join(", ")}</span>
@@ -541,7 +528,7 @@ function Exercises({ plan, names }: { plan: PlanView; names: Names }) {
       )}
       {plan.validation_errors.length > 0 && (
         <p className="text-xs text-muted">
-          🛡️ {plan.validation_errors.length} AI-written exercise(s) failed the automatic check and were fixed or replaced before reaching you.
+          <ShieldCheck size={14} className="mr-1 inline text-duo-green" /> {plan.validation_errors.length} new exercise(s) didn&apos;t pass Duo&apos;s quality check and were replaced before reaching you.
         </p>
       )}
       {plan.status === "ready" && (
@@ -549,78 +536,7 @@ function Exercises({ plan, names }: { plan: PlanView; names: Names }) {
           Start this practice
         </Link>
       )}
-      {plan.status === "consumed" && <p className="text-sm text-muted">✅ You already did this practice.</p>}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ engineering detail */
-
-const STEP_ORDER = ["Learner Analyst", "Curriculum Planner", "Exercise Generator", "Rules Engine"];
-const STEP_PLAIN: Record<string, string> = {
-  "Learner Analyst": "Analyst (step 2)",
-  "Curriculum Planner": "Planner (step 3)",
-  "Exercise Generator": "Writer (step 4)",
-  "Rules Engine": "Rules engine (steps 2-4)",
-};
-
-function UnderTheHood({ plan }: { plan: PlanView }) {
-  const [open, setOpen] = useState(false);
-  const steps = (plan.runs || [])
-    .filter((r) => r.kind === "step")
-    .sort((a, b) => STEP_ORDER.indexOf(a.agent) - STEP_ORDER.indexOf(b.agent) || a.id - b.id);
-  const root = (plan.runs || []).find((r) => r.kind === "pipeline");
-  if (!steps.length) return null;
-  return (
-    <div className="ml-12 mt-5 border-t-2 border-line pt-3">
-      <button className="text-sm font-extrabold uppercase text-muted hover:text-ink" onClick={() => setOpen((o) => !o)}>
-        {open ? "▾" : "▸"} Under the hood (agent runs, tools, tokens)
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-            <p className="mt-2 text-xs text-muted">
-              OpenAI Agents SDK · {root?.model || "model"} · total {root ? (root.latency_ms / 1000).toFixed(1) : "?"}s. Each agent reads your data
-              only through tools and must return a typed (Pydantic) result. Click a run to see it.
-            </p>
-            <div className="mt-3 space-y-2">
-              {steps.map((r) => (
-                <RunRow key={r.id} run={r} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function RunRow({ run }: { run: AgentRun }) {
-  const [show, setShow] = useState(false);
-  const ok = run.status === "ok";
-  return (
-    <div className="rounded-xl bg-surface-2 p-3 text-sm">
-      <button className="flex w-full flex-wrap items-center gap-2 text-left" onClick={() => setShow((s) => !s)}>
-        <span className={`h-2.5 w-2.5 rounded-full ${ok ? "bg-duo-green" : run.status === "running" ? "bg-duo-purple" : "bg-duo-orange"}`} />
-        <span className="font-extrabold text-ink">{STEP_PLAIN[run.agent] || run.agent}</span>
-        <span className="text-xs text-muted">
-          {run.status} · {(run.latency_ms / 1000).toFixed(1)}s · {run.input_tokens + run.output_tokens} tokens
-        </span>
-        <span className="flex flex-wrap gap-1">
-          {run.tool_calls.map((t, i) => (
-            <span key={i} className="rounded bg-surface px-1.5 font-mono text-[11px] text-muted">
-              {t.tool}()
-            </span>
-          ))}
-        </span>
-        <span className="ml-auto text-xs text-duo-blue">{show ? "hide" : "output"}</span>
-      </button>
-      {show && (
-        <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-surface p-2 text-[11px] leading-snug text-muted">
-          {run.error ? `ERROR: ${run.error}\n\n` : ""}
-          {JSON.stringify(run.output, null, 2)}
-        </pre>
-      )}
+      {plan.status === "consumed" && <p className="flex items-center gap-1.5 text-sm text-muted"><CircleCheck size={16} className="text-duo-green" /> You already did this practice.</p>}
     </div>
   );
 }
@@ -634,7 +550,7 @@ function LearnerModel({ data }: { data: Brain }) {
       <button className="flex w-full items-center justify-between text-left" onClick={() => setOpen((o) => !o)}>
         <div>
           <h3 className="text-lg font-extrabold text-ink">Everything Duo tracks about you</h3>
-          <p className="text-sm text-muted">A score per topic, updated instantly after every answer (no AI needed). The agents start from this.</p>
+          <p className="text-sm text-muted">A score for each topic, updated after every answer.</p>
         </div>
         <span className="text-faint">{open ? "▲" : "▼"}</span>
       </button>
@@ -680,7 +596,6 @@ function OlderPlan({ plan, data, names }: { plan: PlanView; data: Brain; names: 
           </div>
           <div className="truncate text-[15px] text-ink">{plan.summary || plan.error || plan.status}</div>
         </div>
-        <EngineBadge plan={plan} />
       </button>
       {open && (
         <div className="mt-2">

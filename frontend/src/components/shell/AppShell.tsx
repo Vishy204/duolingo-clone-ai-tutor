@@ -7,6 +7,7 @@ import { useToast } from "../ui/Toast";
 import RightRail from "./RightRail";
 import Sidebar, { MobileNav } from "./Sidebar";
 import TopStats from "./TopStats";
+import { Snowflake, Sparkles } from "lucide-react";
 
 /** Applies learner preferences (theme, sound) and announces new tutor plans. */
 export function useLearnerEffects() {
@@ -26,16 +27,16 @@ export function useLearnerEffects() {
     }
     setSoundEnabled(me.settings.sound !== false);
     if (me.streak_events?.streak_lost) {
-      toast({ title: "Your streak was reset", body: "Start a new one today!", icon: "🥶", tone: "blue" });
+      toast({ title: "Your streak was reset", body: "Start a new one today!", icon: <Snowflake className="text-duo-blue" />, tone: "blue" });
     } else if (me.streak_events?.freezes_used) {
-      toast({ title: "Streak freeze used!", body: "Your streak is safe.", icon: "🧊", tone: "blue" });
+      toast({ title: "Streak freeze used!", body: "Your streak is safe.", icon: <Snowflake className="text-duo-blue" />, tone: "blue" });
     }
   }, [me, toast]);
 
   useEffect(() => {
     const id = insights?.ready_plan?.id ?? null;
     if (id && lastPlan.current !== null && id !== lastPlan.current) {
-      toast({ title: "Duo built you a new practice!", body: insights?.ready_plan?.summary || "", icon: "🦉", tone: "purple" });
+      toast({ title: "Duo built you a new practice!", body: insights?.ready_plan?.summary || "", icon: <Sparkles className="text-duo-purple" />, tone: "purple" });
       invalidate();
     }
     if (id) lastPlan.current = id;

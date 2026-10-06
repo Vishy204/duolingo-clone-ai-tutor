@@ -26,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-[88px] shrink-0 flex-col border-r-2 border-line px-3 py-6 md:flex lg:w-[256px] lg:px-4">
       <Link href="/learn" className="mb-6 hidden px-4 text-[32px] font-black tracking-tight text-duo-green lg:block">
-        duolingo
+        smartalingo
       </Link>
       <Link href="/learn" className="mb-6 grid place-items-center lg:hidden">
         <Mascot size={44} animate={false} />

@@ -3,8 +3,9 @@
 import AppShell from "@/components/shell/AppShell";
 import { NavLeague } from "@/components/ui/Icons";
 import { useLeaderboard } from "@/lib/hooks";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+const MEDALS = ["#FFC800", "#C0C0C0", "#CD7F32"];
 
 export default function LeaderboardPage() {
   const { data } = useLeaderboard();
@@ -31,8 +32,11 @@ export default function LeaderboardPage() {
             <div
               className={`flex items-center gap-4 rounded-2xl px-4 py-3 ${r.is_me ? "bg-duo-green-light" : "hover:bg-surface-2"}`}
             >
-              <span className={`w-8 text-center text-lg font-extrabold ${r.rank <= 3 ? "" : "text-muted"}`}>
-                {MEDALS[r.rank - 1] || r.rank}
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-full text-base font-extrabold ${r.rank <= 3 ? "text-white" : "text-muted"}`}
+                style={{ background: MEDALS[r.rank - 1] }}
+              >
+                {r.rank}
               </span>
               <span className="grid h-12 w-12 place-items-center rounded-full text-xl font-extrabold text-white" style={{ background: r.avatar_color }}>
                 {r.name[0]}
@@ -44,12 +48,12 @@ export default function LeaderboardPage() {
             </div>
             {data && r.rank === data.league.promote && (
               <div className="my-2 flex items-center gap-3 text-sm font-extrabold uppercase text-duo-green">
-                <span className="h-0.5 flex-1 bg-duo-green/40" /> ⬆ Promotion zone <span className="h-0.5 flex-1 bg-duo-green/40" />
+                <span className="h-0.5 flex-1 bg-duo-green/40" /> <ArrowUp size={16} strokeWidth={3} /> Promotion zone <span className="h-0.5 flex-1 bg-duo-green/40" />
               </div>
             )}
             {data && r.rank === data.rows.length - data.league.demote && (
               <div className="my-2 flex items-center gap-3 text-sm font-extrabold uppercase text-duo-red">
-                <span className="h-0.5 flex-1 bg-duo-red/40" /> ⬇ Demotion zone <span className="h-0.5 flex-1 bg-duo-red/40" />
+                <span className="h-0.5 flex-1 bg-duo-red/40" /> <ArrowDown size={16} strokeWidth={3} /> Demotion zone <span className="h-0.5 flex-1 bg-duo-red/40" />
               </div>
             )}
           </div>

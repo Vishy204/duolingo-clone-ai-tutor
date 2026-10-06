@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { createContext, useCallback, useContext, useState } from "react";
 
-type Toast = { id: number; title: string; body?: string; icon?: string; tone?: "green" | "purple" | "blue" | "red" };
+type Toast = { id: number; title: string; body?: string; icon?: React.ReactNode; tone?: "green" | "purple" | "blue" | "red" };
 const ToastCtx = createContext<(t: Omit<Toast, "id">) => void>(() => {});
 
 export const useToast = () => useContext(ToastCtx);
@@ -35,7 +35,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               exit={{ y: -30, opacity: 0 }}
               className={`pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl border-2 border-b-4 bg-surface px-4 py-3 shadow-lg ${TONES[t.tone || "green"]}`}
             >
-              {t.icon && <span className="text-3xl">{t.icon}</span>}
+              {t.icon && <span className="grid h-10 w-10 shrink-0 place-items-center text-ink">{t.icon}</span>}
               <div>
                 <div className="font-extrabold text-ink">{t.title}</div>
                 {t.body && <div className="text-sm text-muted">{t.body}</div>}

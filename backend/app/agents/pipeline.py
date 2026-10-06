@@ -30,6 +30,7 @@ from app.agents.validation import Converted, validate_all
 from app.core.clock import utcnow
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.core.text import strip_emoji
 from app.models import AdaptivePlan, Concept, Exercise, User
 from app.services.grading import normalize
 
@@ -164,7 +165,7 @@ def _sanitize_plan(plan: PracticePlan, known: set[str], diagnosis: LearnerDiagno
         total -= 1
     plan.items = items
     plan.review_concepts = [c for c in plan.review_concepts if c in known][:3]
-    plan.learner_message = plan.learner_message[:220]
+    plan.learner_message = strip_emoji(plan.learner_message)[:220]
     return plan
 
 

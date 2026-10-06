@@ -311,7 +311,7 @@ def complete_session(db: Session, user: User, session: LessonSession) -> dict:
         "xp_today": xp.xp_today(db, user),
         "daily_goal_xp": user.daily_goal_xp,
         "achievements": [
-            {"key": a.key, "title": a.title, "icon": a.icon, "color": a.color, "description": a.description}
+            {"key": a.key, "title": a.title, "color": a.color, "description": a.description}
             for a in unlocked
         ],
     }

@@ -11,6 +11,7 @@ import Mascot from "../Mascot";
 import { Check, Chest, Crown, Lock, Sparkle, Star, Trophy } from "../ui/Icons";
 import Modal from "../ui/Modal";
 import { useToast } from "../ui/Toast";
+import { BookOpen, Gem as GemIcon } from "lucide-react";
 
 // Horizontal offsets that make the path snake like Duolingo's.
 const OFFSETS = [0, 44, 70, 44, 0, -44, -70, -44];
@@ -84,7 +85,7 @@ function UnitSection({
           className="flex items-center gap-2 rounded-xl border-2 border-b-4 px-3 py-2.5 text-sm font-extrabold uppercase"
           style={{ borderColor: shade(color, -40), background: color }}
         >
-          📖 <span className="hidden sm:inline">Guidebook</span>
+          <BookOpen size={20} strokeWidth={2.5} /> <span className="hidden sm:inline">Guidebook</span>
         </button>
       </div>
 
@@ -158,7 +159,7 @@ function Node({ node, color, isActive }: { node: PathNode; color: string; isActi
         disabled={!claimable}
         onClick={async () => {
           const r = await post<{ gems_awarded: number }>(`/path/chest/${node.id}`);
-          toast({ title: `+${r.gems_awarded} gems!`, body: "You opened a treasure chest", icon: "💎", tone: "blue" });
+          toast({ title: `+${r.gems_awarded} gems!`, body: "You opened a treasure chest", icon: <GemIcon className="text-duo-blue" />, tone: "blue" });
           invalidate();
         }}
         className={`relative transition-transform ${claimable ? "animate-bounce hover:scale-105" : ""} ${node.status === "locked" ? "opacity-50 grayscale" : ""}`}
@@ -213,7 +214,7 @@ function Node({ node, color, isActive }: { node: PathNode; color: string; isActi
             style={{ background: locked ? "var(--surface-2)" : bg, color: locked ? "var(--text-faint)" : "#fff", border: locked ? "2px solid var(--border)" : undefined }}
           >
             <div className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45" style={{ background: locked ? "var(--surface-2)" : bg }} />
-            <div className="text-lg font-extrabold">{node.icon} {node.title}</div>
+            <div className="text-lg font-extrabold">{node.title}</div>
             <div className="mb-3 text-[15px] opacity-90">
               {locked
                 ? "Complete all levels above to unlock this!"

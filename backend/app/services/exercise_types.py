@@ -33,7 +33,8 @@ LANG_NAMES = {"es": "Spanish", "en": "English"}
 def public_payload(ex_type: str, payload: dict, rng_seed: int | None = None) -> dict:
     rng = random.Random(rng_seed)
     if ex_type == "multiple_choice":
-        return {"question": payload["question"], "choices": payload["choices"], "speak": payload.get("speak")}
+        choices = [{"text": c["text"]} for c in payload["choices"]]
+        return {"question": payload["question"], "choices": choices, "speak": payload.get("speak")}
     if ex_type == "translate":
         return {
             "source": payload["source"],

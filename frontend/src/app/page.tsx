@@ -29,20 +29,20 @@ export default function Landing() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-        <span className="text-[32px] font-black tracking-tight text-duo-green">duolingo</span>
+        <span className="text-[32px] font-black tracking-tight text-duo-green">smartalingo</span>
         <span className="text-sm font-extrabold uppercase text-faint">Site language: English</span>
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-10 px-6 md:flex-row md:gap-20">
         <div className="relative">
           <Mascot size={300} mood="wave" />
-          <span className="absolute -right-4 top-6 rounded-2xl border-2 border-line bg-surface px-3 py-2 text-lg">¡Hola! 👋</span>
+          <span className="absolute -right-4 top-6 rounded-2xl border-2 border-line bg-surface px-3 py-2 text-lg">¡Hola!</span>
         </div>
         <div className="flex max-w-md flex-col items-center gap-6 text-center">
           <h1 className="text-[32px] font-extrabold leading-tight text-ink">
             The free, fun, and effective way to learn a language!
           </h1>
           <p className="text-muted">
-            Now with <span className="text-duo-purple">Duo AI</span>: an agentic tutor that studies your mistakes and builds
+            Now with <span className="text-duo-purple">Duo AI</span>: a personal tutor that learns from your mistakes and builds
             practice just for you.
           </p>
           <button className="btn btn-green w-full max-w-xs" onClick={start} disabled={busy}>
@@ -55,7 +55,7 @@ export default function Landing() {
         </div>
       </main>
       <footer className="border-t-2 border-line py-4 text-center text-xs text-faint">
-        An educational clone built for a take-home assignment · not affiliated with Duolingo
+        Smartalingo · a Duolingo-inspired project, not affiliated with Duolingo
       </footer>
     </div>
   );

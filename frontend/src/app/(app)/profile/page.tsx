@@ -3,6 +3,8 @@
 import AppShell from "@/components/shell/AppShell";
 import { Crown, Flame } from "@/components/ui/Icons";
 import { useProfile } from "@/lib/hooks";
+import { BookOpen, Medal, Target, Zap } from "lucide-react";
+import { AchievementIcon } from "@/components/ui/AppIcons";
 
 export default function ProfilePage() {
   const { data } = useProfile();
@@ -25,11 +27,11 @@ export default function ProfilePage() {
       <h2 className="mb-3 mt-6 text-2xl font-extrabold text-ink">Statistics</h2>
       <div className="grid grid-cols-2 gap-3">
         <Stat icon={<Flame size={28} />} value={user.streak} label="Day streak" />
-        <Stat icon={<span className="text-2xl">⚡</span>} value={user.total_xp} label="Total XP" />
+        <Stat icon={<Zap size={28} strokeWidth={2.5} className="text-duo-yellow" />} value={user.total_xp} label="Total XP" />
         <Stat icon={<Crown size={28} />} value={stats.skills} label="Levels completed" />
-        <Stat icon={<span className="text-2xl">📘</span>} value={stats.lessons} label="Lessons" />
-        <Stat icon={<span className="text-2xl">🎯</span>} value={stats.perfect} label="Perfect lessons" />
-        <Stat icon={<span className="text-2xl">🏅</span>} value={user.longest_streak} label="Longest streak" />
+        <Stat icon={<BookOpen size={28} strokeWidth={2.5} className="text-duo-blue" />} value={stats.lessons} label="Lessons" />
+        <Stat icon={<Target size={28} strokeWidth={2.5} className="text-duo-green" />} value={stats.perfect} label="Perfect lessons" />
+        <Stat icon={<Medal size={28} strokeWidth={2.5} className="text-duo-orange" />} value={user.longest_streak} label="Longest streak" />
       </div>
 
       <h2 className="mb-3 mt-8 text-2xl font-extrabold text-ink">XP this week</h2>
@@ -61,8 +63,8 @@ export default function ProfilePage() {
       <div className="card divide-y-2 divide-line">
         {achievements.map((a) => (
           <div key={a.key} className={`flex items-center gap-4 p-4 ${a.unlocked ? "" : "opacity-60"}`}>
-            <div className="grid h-16 w-14 place-items-center rounded-xl text-3xl" style={{ background: a.unlocked ? a.color : "var(--locked)" }}>
-              {a.icon}
+            <div className="grid h-16 w-14 place-items-center rounded-xl" style={{ background: a.unlocked ? a.color : "var(--locked)" }}>
+              <AchievementIcon achievementKey={a.key} />
             </div>
             <div className="flex-1">
               <div className="font-extrabold text-ink">{a.title}</div>

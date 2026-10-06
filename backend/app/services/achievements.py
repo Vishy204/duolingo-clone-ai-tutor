@@ -57,7 +57,7 @@ def list_for_user(db: Session, user: User) -> list[dict]:
     out = []
     for ach in db.scalars(select(Achievement).order_by(Achievement.metric, Achievement.threshold)).all():
         out.append({
-            "key": ach.key, "title": ach.title, "description": ach.description, "icon": ach.icon,
+            "key": ach.key, "title": ach.title, "description": ach.description,
             "color": ach.color, "progress": min(m.get(ach.metric, 0), ach.threshold), "threshold": ach.threshold,
             "unlocked": ach.id in have,
             "unlocked_at": have[ach.id].isoformat() if ach.id in have else None,
@@ -77,11 +77,11 @@ def daily_quests(db: Session, user: User) -> list[dict]:
     great_today = sum(1 for s in todays if (s.accuracy or 0) >= 0.9)
     personalized_today = sum(1 for s in todays if s.mode == "personalized")
     return [
-        {"key": "xp", "title": f"Earn {user.daily_goal_xp} XP", "icon": "⚡",
+        {"key": "xp", "title": f"Earn {user.daily_goal_xp} XP",
          "progress": min(xp_today, user.daily_goal_xp), "target": user.daily_goal_xp},
-        {"key": "lessons", "title": "Complete 2 lessons", "icon": "📘", "progress": min(lessons_today, 2), "target": 2},
-        {"key": "accuracy", "title": "Score 90% or higher in 2 lessons", "icon": "🎯",
+        {"key": "lessons", "title": "Complete 2 lessons", "progress": min(lessons_today, 2), "target": 2},
+        {"key": "accuracy", "title": "Score 90% or higher in 2 lessons",
          "progress": min(great_today, 2), "target": 2},
-        {"key": "duo", "title": "Finish a personalized practice from Duo", "icon": "🦉",
+        {"key": "duo", "title": "Finish a personalized practice from Duo",
          "progress": min(personalized_today, 1), "target": 1},
     ]

@@ -7,6 +7,7 @@ import { sfx } from "@/lib/sound";
 import type { CompleteResult } from "@/lib/types";
 import Mascot from "../Mascot";
 import { Flame } from "../ui/Icons";
+import { Clock, Sparkles, Target, Zap } from "lucide-react";
 
 function fmt(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -47,14 +48,14 @@ export default function LessonComplete({ summary, onDone }: { summary: CompleteR
               {title}
             </motion.h1>
             <div className="grid w-full grid-cols-3 gap-3">
-              <StatCard label="Total XP" color="#FFC800" value={`⚡ ${summary.xp_earned}`} delay={0.1} />
-              <StatCard label={accuracyLabel} color="#58CC02" value={`🎯 ${pct}%`} delay={0.25} />
-              <StatCard label={summary.duration_seconds < 120 ? "Speedy" : "Committed"} color="#1CB0F6" value={`⏱ ${fmt(summary.duration_seconds)}`} delay={0.4} />
+              <StatCard label="Total XP" color="#FFC800" value={<><Zap size={20} strokeWidth={3} /> {summary.xp_earned}</>} delay={0.1} />
+              <StatCard label={accuracyLabel} color="#58CC02" value={<><Target size={20} strokeWidth={3} /> {pct}%</>} delay={0.25} />
+              <StatCard label={summary.duration_seconds < 120 ? "Speedy" : "Committed"} color="#1CB0F6" value={<><Clock size={20} strokeWidth={3} /> {fmt(summary.duration_seconds)}</>} delay={0.4} />
             </div>
-            {summary.skill_completed && <div className="text-lg text-duo-green">👑 Level complete! The next one is unlocked.</div>}
+            {summary.skill_completed && <div className="text-lg text-duo-green">Level complete! The next one is unlocked.</div>}
             {summary.tutor_updating && (
               <div className="flex items-center gap-2 rounded-2xl border-2 border-duo-purple px-4 py-3 text-left text-[15px] text-ink">
-                <span className="text-2xl">🦉</span>
+                <Sparkles size={22} className="shrink-0 text-duo-purple" />
                 Duo is reviewing your answers to personalize your next practice…
               </div>
             )}
@@ -86,7 +87,7 @@ export default function LessonComplete({ summary, onDone }: { summary: CompleteR
   );
 }
 
-function StatCard({ label, value, color, delay }: { label: string; value: string; color: string; delay: number }) {
+function StatCard({ label, value, color, delay }: { label: string; value: React.ReactNode; color: string; delay: number }) {
   return (
     <motion.div
       initial={{ y: 30, opacity: 0 }}
@@ -96,7 +97,7 @@ function StatCard({ label, value, color, delay }: { label: string; value: string
       style={{ borderColor: color, background: color }}
     >
       <div className="py-1 text-xs font-extrabold uppercase tracking-wider text-white">{label}</div>
-      <div className="rounded-xl bg-surface py-4 text-xl font-extrabold" style={{ color }}>
+      <div className="flex items-center justify-center gap-1.5 rounded-xl bg-surface py-4 text-xl font-extrabold" style={{ color }}>
         {value}
       </div>
     </motion.div>

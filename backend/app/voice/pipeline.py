@@ -38,7 +38,7 @@ from app.models import TutorMessage, User
 from app.voice.config import VoiceConfig
 
 SYSTEM_PROMPT = """\
-You are Duo, a cheerful owl who tutors Spanish by VOICE inside a Duolingo-style app. The learner
+You are Duo, a cheerful owl who tutors Spanish by VOICE inside the Smartalingo app. The learner
 speaks English and is learning Spanish; they may say Spanish phrases and ask if they're right.
 
 How you talk (this is read aloud):

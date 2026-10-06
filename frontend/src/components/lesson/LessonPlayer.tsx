@@ -18,6 +18,7 @@ import Modal from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import FeedbackSheet from "./FeedbackSheet";
 import LessonComplete from "./LessonComplete";
+import { Award, Gem as GemIcon, HeartCrack, TriangleAlert } from "lucide-react";
 
 type Phase = "loading" | "answering" | "feedback" | "complete" | "error";
 
@@ -95,7 +96,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
       setSummary(done);
       setPhase("complete");
       done.achievements.forEach((a, i) =>
-        setTimeout(() => toast({ title: `Achievement unlocked: ${a.title}`, body: a.description, icon: a.icon, tone: "green" }), 600 + i * 900),
+        setTimeout(() => toast({ title: `Achievement unlocked: ${a.title}`, body: a.description, icon: <Award className="text-duo-yellow" />, tone: "green" }), 600 + i * 900),
       );
       invalidate();
     } catch (e) {
@@ -132,7 +133,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
       } catch (e) {
         const err = e as ApiError;
         if (err.code === "no_hearts") setNoHearts(true);
-        else toast({ title: "Hmm, that didn't go through", body: err.message, icon: "⚠️", tone: "red" });
+        else toast({ title: "Hmm, that didn't go through", body: err.message, icon: <TriangleAlert className="text-duo-red" />, tone: "red" });
       } finally {
         setBusy(false);
       }
@@ -188,7 +189,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
       }
       if (!session) boot(); // ran out before the lesson even started: start it now
     } catch (e) {
-      toast({ title: "Not enough gems", body: (e as Error).message, icon: "💎", tone: "blue" });
+      toast({ title: "Not enough gems", body: (e as Error).message, icon: <GemIcon className="text-duo-blue" />, tone: "blue" });
     }
   };
 
@@ -300,7 +301,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
       </Modal>
 
       <Modal open={noHearts}>
-        <div className="text-6xl">💔</div>
+        <HeartCrack size={64} className="mx-auto text-duo-red" />
         <h2 className="mt-3 text-2xl font-extrabold text-ink">You ran out of hearts!</h2>
         <p className="mb-6 mt-2 text-muted">Refill your hearts to keep going, or practice to earn them back.</p>
         <button className="btn btn-blue mb-3 w-full justify-between" onClick={refill} disabled={(me?.gems ?? 0) < (me?.refill_cost ?? 350)}>

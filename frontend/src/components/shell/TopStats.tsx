@@ -6,6 +6,7 @@ import { useAction, useMe } from "@/lib/hooks";
 import type { Me } from "@/lib/types";
 import { useToast } from "../ui/Toast";
 import { FlagES, Flame, Gem, Heart } from "../ui/Icons";
+import { Heart as HeartIcon, Snowflake } from "lucide-react";
 
 function useCountdown(iso: string | null) {
   const [now, setNow] = useState(() => Date.now());
@@ -77,12 +78,12 @@ function StreakPop({ me }: { me: Me }) {
         <div>
           <div className="text-xl font-extrabold text-ink">{me.streak} day streak</div>
           <div className="text-sm text-muted">
-            {me.streak_extended_today ? "You extended your streak today! 🎉" : "Do a lesson today to extend your streak!"}
+            {me.streak_extended_today ? "You extended your streak today!" : "Do a lesson today to extend your streak!"}
           </div>
         </div>
       </div>
       <div className="mt-3 rounded-xl bg-surface-2 p-3 text-sm text-muted">
-        🧊 {me.streak_freezes} streak freeze{me.streak_freezes === 1 ? "" : "s"} equipped · longest streak {me.longest_streak}
+        <Snowflake size={16} className="mr-1 inline text-duo-blue" /> {me.streak_freezes} streak freeze{me.streak_freezes === 1 ? "" : "s"} equipped · longest streak {me.longest_streak}
       </div>
     </div>
   );
@@ -125,7 +126,7 @@ function HeartsPop({ me }: { me: Me }) {
             disabled={me.gems < me.refill_cost || refill.isPending}
             onClick={() =>
               refill.mutate(undefined, {
-                onSuccess: () => toast({ title: "Hearts refilled!", icon: "❤️", tone: "red" }),
+                onSuccess: () => toast({ title: "Hearts refilled!", icon: <HeartIcon className="text-duo-red" />, tone: "red" }),
               })
             }
           >

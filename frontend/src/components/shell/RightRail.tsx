@@ -5,6 +5,8 @@ import { useInsights, useLeaderboard, useMe, useQuests } from "@/lib/hooks";
 import Mascot from "../Mascot";
 import { NavLeague, Sparkle } from "../ui/Icons";
 import TopStats from "./TopStats";
+import { Gift, Package, Zap } from "lucide-react";
+import { QuestIcon } from "../ui/AppIcons";
 
 export default function RightRail({ showStats = true }: { showStats?: boolean }) {
   return (
@@ -85,13 +87,13 @@ export function DailyGoalCard() {
         <Link href="/settings" className="text-sm font-extrabold uppercase text-duo-blue">Edit</Link>
       </div>
       <div className="flex items-center gap-4">
-        <span className="text-4xl">⚡</span>
+        <Zap size={40} strokeWidth={2.5} className="text-duo-yellow" />
         <div className="flex-1">
           <div className="relative h-4 rounded-full bg-line">
             <div className="h-4 rounded-full bg-duo-yellow transition-all" style={{ width: `${pct}%` }} />
           </div>
           <div className="mt-1 text-sm text-muted">
-            {me.xp_today} / {me.daily_goal_xp} XP {pct >= 100 && "· Goal reached! 🎉"}
+            {me.xp_today} / {me.daily_goal_xp} XP {pct >= 100 && "· Goal reached!"}
           </div>
         </div>
       </div>
@@ -109,18 +111,18 @@ export function QuestsCard() {
       </div>
       <div className="space-y-4">
         {(data || []).slice(0, 3).map((q) => (
-          <QuestRow key={q.key} title={q.title} icon={q.icon} progress={q.progress} target={q.target} />
+          <QuestRow key={q.key} title={q.title} questKey={q.key} progress={q.progress} target={q.target} />
         ))}
       </div>
     </div>
   );
 }
 
-export function QuestRow({ title, icon, progress, target }: { title: string; icon: string; progress: number; target: number }) {
+export function QuestRow({ title, questKey, progress, target }: { title: string; questKey: string; progress: number; target: number }) {
   const done = progress >= target;
   return (
     <div className="flex items-center gap-3">
-      <span className="text-3xl">{icon}</span>
+      <QuestIcon questKey={questKey} size={30} />
       <div className="flex-1">
         <div className="mb-1.5 text-[15px] text-ink">{title}</div>
         <div className="relative h-4 rounded-full bg-line">
@@ -130,7 +132,7 @@ export function QuestRow({ title, icon, progress, target }: { title: string; ico
           </span>
         </div>
       </div>
-      <span className="text-2xl">{done ? "🎁" : "📦"}</span>
+      {done ? <Gift size={26} className="shrink-0 text-duo-green" /> : <Package size={26} className="shrink-0 text-faint" />}
     </div>
   );
 }

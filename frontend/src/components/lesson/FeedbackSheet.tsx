@@ -74,7 +74,7 @@ export default function FeedbackSheet({
                     {ex.error && <span className="text-muted">{ex.error}</span>}
                     {ex.data && (
                       <>
-                        <div className="font-extrabold text-duo-purple">🦉 {ex.data.headline}</div>
+                        <div className="font-extrabold text-duo-purple">{ex.data.headline}</div>
                         <div className="mt-1">{ex.data.explanation}</div>
                         <div className="mt-2 text-muted">
                           <span className="text-ink">{ex.data.example_es}</span> · {ex.data.example_en}

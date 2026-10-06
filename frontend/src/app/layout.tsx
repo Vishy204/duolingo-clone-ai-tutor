@@ -6,8 +6,8 @@ import "./globals.css";
 const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin", "latin-ext"], weight: ["600", "700", "800", "900"] });
 
 export const metadata: Metadata = {
-  title: "Duolingo Clone · with an adaptive AI tutor",
-  description: "A Duolingo-style Spanish course with an agentic tutor that adapts to your mistakes.",
+  title: "Smartalingo · learn Spanish with an AI tutor",
+  description: "Bite-size Spanish lessons with a personal AI tutor that adapts to your mistakes.",
 };
 
 export const viewport: Viewport = { themeColor: "#58CC02", width: "device-width", initialScale: 1 };

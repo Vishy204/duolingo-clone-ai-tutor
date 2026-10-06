@@ -2,14 +2,15 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Brain, MessageCircle } from "lucide-react";
 import AppShell from "@/components/shell/AppShell";
 import ChatPanel from "@/components/tutor/ChatPanel";
 import TutorBrain from "@/components/tutor/TutorBrain";
 import VoiceDuo from "@/components/tutor/VoiceDuo";
 
 const TABS = [
-  { key: "talk", label: "Talk to Duo", icon: "💬" },
-  { key: "learn", label: "How Duo learns", icon: "🧠" },
+  { key: "talk", label: "Talk to Duo", Icon: MessageCircle },
+  { key: "learn", label: "How Duo learns", Icon: Brain },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -44,7 +45,7 @@ function TutorTabs() {
                 active ? "bg-duo-blue-light text-duo-blue border-2 border-duo-blue-border" : "border-2 border-transparent text-muted hover:bg-surface-2"
               }`}
             >
-              <span className="text-lg">{t.icon}</span> {t.label}
+              <t.Icon size={20} strokeWidth={2.5} /> {t.label}
             </button>
           );
         })}

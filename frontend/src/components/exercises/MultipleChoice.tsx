@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { sfx, speak } from "@/lib/sound";
 import { KeyHint, type ExerciseProps } from "./shared";
 
-type Choice = { text: string; emoji?: string | null };
+type Choice = { text: string };
 
 export default function MultipleChoice({ data, disabled, onChange, status }: ExerciseProps<{ choice: number }>) {
   const [picked, setPicked] = useState<number | null>(null);
   const choices: Choice[] = data.choices;
-  const withPictures = choices.every((c) => c.emoji);
 
   const pick = (i: number) => {
     if (disabled) return;
@@ -31,24 +30,14 @@ export default function MultipleChoice({ data, disabled, onChange, status }: Exe
   return (
     <div>
       <h2 className="mb-6 text-2xl font-extrabold text-ink sm:text-[28px]">{data.question}</h2>
-      <div className={withPictures ? "grid grid-cols-2 gap-3 sm:grid-cols-3" : "flex flex-col gap-3"}>
+      <div className="flex flex-col gap-3">
         {choices.map((c, i) => {
           const sel = picked === i;
           const cls = sel ? (status === "correct" ? "tile-correct" : status === "wrong" ? "tile-wrong" : "tile-selected") : "";
-          return withPictures ? (
+          return (
             <button key={i} disabled={disabled} onClick={() => pick(i)}
-              className={`tile flex flex-col items-center justify-between gap-2 p-4 ${cls} ${sel && status === "wrong" ? "animate-shake" : ""}`}>
-              <span className="py-3 text-6xl sm:text-7xl">{c.emoji}</span>
-              <span className="flex w-full items-center justify-between text-lg">
-                <span>{c.text}</span>
-                <KeyHint n={i + 1} />
-              </span>
-            </button>
-          ) : (
-            <button key={i} disabled={disabled} onClick={() => pick(i)}
-              className={`tile flex items-center gap-4 p-4 text-left text-lg ${cls}`}>
+              className={`tile flex items-center gap-4 p-4 text-left text-lg ${cls} ${sel && status === "wrong" ? "animate-shake" : ""}`}>
               <KeyHint n={i + 1} />
-              {c.emoji && <span className="text-2xl">{c.emoji}</span>}
               <span>{c.text}</span>
             </button>
           );

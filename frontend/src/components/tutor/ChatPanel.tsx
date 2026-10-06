@@ -6,6 +6,7 @@ import { api, post } from "@/lib/api";
 import { keys } from "@/lib/hooks";
 import type { ChatMessage } from "@/lib/types";
 import Mascot from "../Mascot";
+import { Mic } from "lucide-react";
 
 const SUGGESTIONS = [
   "Is 'hola amigo' correct?",
@@ -108,9 +109,9 @@ function Bubble({ m }: { m: ChatMessage }) {
           mine ? "bg-duo-blue text-white" : m.blocked ? "border-2 border-duo-orange text-ink" : "border-2 border-line text-ink"
         }`}
       >
-        {m.channel === "voice" && <span className="mr-1 text-xs opacity-70">🎙️</span>}
+        {m.channel === "voice" && <Mic size={13} className="mr-1 inline opacity-70" />}
         {m.content}
-        {m.blocked && <div className="mt-1 text-[11px] uppercase text-duo-orange">blocked by topic guardrail</div>}
+        
       </div>
     </div>
   );

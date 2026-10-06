@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { patch, post, resetLearner } from "@/lib/api";
 import { useInvalidateLearner, useMe } from "@/lib/hooks";
 import type { Me } from "@/lib/types";
+import { Calendar, CircleCheck } from "lucide-react";
 
 const GOALS = [
   { xp: 10, label: "Casual" },
@@ -42,7 +43,7 @@ export default function SettingsPage() {
             onChange={(e) => setName(e.target.value)}
             className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 py-3 text-ink outline-none focus:border-duo-blue-border"
           />
-          <button className="btn btn-blue" disabled={!name || name === me.display_name} onClick={() => save({ display_name: name }).then(() => toast({ title: "Saved!", icon: "✅" }))}>
+          <button className="btn btn-blue" disabled={!name || name === me.display_name} onClick={() => save({ display_name: name }).then(() => toast({ title: "Saved!", icon: <CircleCheck className="text-duo-green" /> }))}>
             Save
           </button>
         </div>
@@ -76,7 +77,7 @@ export default function SettingsPage() {
               onClick={async () => {
                 const r = await post<Me>("/dev/advance-day");
                 invalidate();
-                toast({ title: `It's now ${r.today}`, body: r.streak ? `Streak: ${r.streak}` : "Your streak needs a lesson today!", icon: "📅", tone: "blue" });
+                toast({ title: `It's now ${r.today}`, body: r.streak ? `Streak: ${r.streak}` : "Your streak needs a lesson today!", icon: <Calendar className="text-duo-blue" />, tone: "blue" });
               }}
             >
               Simulate next day
@@ -97,11 +98,11 @@ export default function SettingsPage() {
       <Section title="Coming soon">
         <div className="flex flex-wrap gap-2">
           {[
-            ["speaking", "🎤 Speaking exercises"],
-            ["friends", "🤝 Friends"],
-            ["super", "⭐ Super"],
-            ["courses", "🌍 More languages"],
-            ["notifications", "🔔 Notifications"],
+            ["speaking", "Speaking exercises"],
+            ["friends", "Friends"],
+            ["super", "Super"],
+            ["courses", "More languages"],
+            ["notifications", "Notifications"],
           ].map(([k, label]) => (
             <Link key={k} href={`/soon/${k}`} className="rounded-xl border-2 border-line px-3 py-2 text-sm text-muted hover:bg-surface-2">
               {label}

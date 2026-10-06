@@ -24,11 +24,12 @@ from app.agents.definitions import DUO_INSTRUCTIONS, _settings, analyst_agent, e
 from app.agents.observability import run_step
 from app.agents.schemas import Explanation, TopicVerdict
 from app.core.config import get_settings
+from app.core.text import strip_emoji
 from app.models import AdaptivePlan, Concept, Exercise, ExerciseAttempt, TutorMessage, User
 from app.services.exercise_types import display_answer
 
 HISTORY_TURNS = 8
-BLOCKED_REPLY = "Hoot! I'm your Spanish tutor, so let's stick to language learning. ¿Qué quieres aprender? 🦉"
+BLOCKED_REPLY = "I'm your Spanish tutor, so let's stick to language learning. ¿Qué quieres aprender?"
 
 
 @input_guardrail
@@ -128,7 +129,7 @@ async def chat(db, user: User, message: str) -> dict:
     with trace("Duo chat", group_id=f"learner-{user.id}"):
         try:
             result, _ = await run_step(duo_agent(), items, ctx, kind="chat", max_turns=6)
-            reply = str(result.final_output)
+            reply = strip_emoji(str(result.final_output))
         except InputGuardrailTripwireTriggered:
             reply, blocked = BLOCKED_REPLY, True
 
@@ -166,4 +167,4 @@ async def explain_attempt(db, user: User, attempt_id: int) -> dict:
         result, _ = await run_step(explainer_agent(), json.dumps(payload, ensure_ascii=False), ctx,
                                    kind="explain", max_turns=1)
     out: Explanation = result.final_output
-    return out.model_dump()
+    return {k: strip_emoji(v) if isinstance(v, str) else v for k, v in out.model_dump().items()}

@@ -5,13 +5,14 @@ import { Gem, Heart } from "@/components/ui/Icons";
 import { useToast } from "@/components/ui/Toast";
 import { useAction, useMe } from "@/lib/hooks";
 import type { Me } from "@/lib/types";
+import { Gem as GemIcon, Heart as HeartIcon, Snowflake } from "lucide-react";
 
 export default function ShopPage() {
   const { data: me } = useMe();
   const refill = useAction<void, Me>("/shop/refill-hearts");
   const freeze = useAction<void, Me>("/shop/streak-freeze");
   const toast = useToast();
-  const fail = (e: Error) => toast({ title: "Can't buy that", body: e.message, icon: "💎", tone: "blue" });
+  const fail = (e: Error) => toast({ title: "Can't buy that", body: e.message, icon: <GemIcon className="text-duo-blue" />, tone: "blue" });
 
   return (
     <AppShell>
@@ -24,7 +25,7 @@ export default function ShopPage() {
           <button
             className="btn btn-white w-36"
             disabled={!me || me.hearts >= me.max_hearts || refill.isPending}
-            onClick={() => refill.mutate(undefined, { onSuccess: () => toast({ title: "Hearts refilled!", icon: "❤️", tone: "red" }), onError: fail })}
+            onClick={() => refill.mutate(undefined, { onSuccess: () => toast({ title: "Hearts refilled!", icon: <HeartIcon className="text-duo-red" />, tone: "red" }), onError: fail })}
           >
             {me && me.hearts >= me.max_hearts ? "Full" : <><Gem size={18} /> {me?.refill_cost ?? 350}</>}
           </button>
@@ -32,14 +33,14 @@ export default function ShopPage() {
       />
       <h2 className="mb-2 mt-8 text-2xl font-extrabold text-ink">Power-ups</h2>
       <Item
-        icon={<span className="text-6xl">🧊</span>}
+        icon={<Snowflake size={56} strokeWidth={2.5} className="text-duo-blue" />}
         title="Streak Freeze"
         body={`Streak Freeze allows your streak to remain in place for one full day of inactivity. ${me?.streak_freezes ?? 0} / 2 equipped`}
         action={
           <button
             className="btn btn-white w-36"
             disabled={!me || me.streak_freezes >= 2 || freeze.isPending}
-            onClick={() => freeze.mutate(undefined, { onSuccess: () => toast({ title: "Streak Freeze equipped!", icon: "🧊", tone: "blue" }), onError: fail })}
+            onClick={() => freeze.mutate(undefined, { onSuccess: () => toast({ title: "Streak Freeze equipped!", icon: <Snowflake className="text-duo-blue" />, tone: "blue" }), onError: fail })}
           >
             <Gem size={18} /> 200
           </button>
@@ -47,7 +48,7 @@ export default function ShopPage() {
       />
       <h2 className="mb-2 mt-8 text-2xl font-extrabold text-ink">Super</h2>
       <div className="rounded-2xl bg-gradient-to-br from-[#26075e] to-[#1a8bd6] p-6 text-white">
-        <div className="text-sm font-extrabold uppercase opacity-80">Super Duolingo</div>
+        <div className="text-sm font-extrabold uppercase opacity-80">Smartalingo Super</div>
         <div className="text-2xl font-extrabold">Unlimited hearts, no ads</div>
         <p className="mt-1 opacity-80">In-app purchases are mocked for this clone. Coming soon!</p>
       </div>

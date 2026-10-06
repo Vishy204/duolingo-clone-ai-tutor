@@ -93,7 +93,7 @@ def path(user: User = Depends(current_user), db: Session = Depends(get_db)):
         for skill in unit.skills:
             st = states[skill.id]
             nodes.append({
-                "id": skill.id, "title": skill.title, "icon": skill.icon, "kind": skill.kind,
+                "id": skill.id, "title": skill.title, "kind": skill.kind,
                 "status": st.status, "lessons_total": st.lessons_total, "lessons_completed": st.lessons_completed,
                 "crowns": st.crowns, "is_legendary": st.is_legendary, "next_lesson_id": st.next_lesson_id,
             })
