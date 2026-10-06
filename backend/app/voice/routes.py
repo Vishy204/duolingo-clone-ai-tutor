@@ -73,6 +73,21 @@ def _left(cfg, db: Session, user_id: int, ip: str) -> int:
     return max(0, min(cfg.daily_sessions - _sessions_today(db, user_id), cfg.ip_daily_sessions - _ip_used(ip)))
 
 
+def warm_up() -> None:
+    """Import the voice stack and load the VAD model ahead of time. Done lazily, the first voice chat
+    after a deploy took ~15s on the free instance; at boot (in a thread) it costs nobody anything."""
+    if load_voice_config() is None:
+        return
+    import pipecat.serializers.protobuf  # noqa: F401
+    import pipecat.transports.websocket.fastapi  # noqa: F401
+    import pipecat.workers.runner  # noqa: F401
+    from pipecat.audio.vad.silero import SileroVADAnalyzer
+
+    import app.voice.pipeline  # noqa: F401  (Deepgram, Cerebras/OpenAI services)
+
+    SileroVADAnalyzer()  # first load of the ONNX model
+
+
 @router.get("/status")
 def status(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     cfg = load_voice_config()

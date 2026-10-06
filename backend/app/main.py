@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -22,7 +23,19 @@ async def lifespan(_: FastAPI):
         # The key is read from env/.env by our settings and handed to the SDK in-process only.
         set_default_openai_key(settings.openai_api_key, use_for_tracing=True)
         set_tracing_export_api_key(settings.openai_api_key)
+    # Warm the voice stack in the background so the first voice chat starts fast.
+    warm = asyncio.create_task(asyncio.to_thread(_warm_voice))
     yield
+    warm.cancel()
+
+
+def _warm_voice() -> None:
+    try:
+        from app.voice.routes import warm_up
+
+        warm_up()
+    except Exception as e:  # noqa: BLE001  (voice is optional; never block or crash startup)
+        logging.getLogger("voice").info("voice warm-up skipped: %s", e)
 
 
 app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
