@@ -1,253 +1,402 @@
 # Smartalingo
 
-A Duolingo-style Spanish app with an AI tutor that learns from your mistakes and rewrites your practice.
+A Duolingo-style Spanish learning web app with an adaptive AI tutor, built for the Scaler AI Labs SDE Fullstack assignment.
 
-**Live app:** https://smartalingo.vercel.app · **API docs:** https://smartalingo-api.onrender.com/docs
-**Repo:** https://github.com/Vishy204/smartalingo · **Stack:** Next.js 16 (TypeScript) · FastAPI · SQLite · OpenAI Agents SDK · Pipecat
+| | |
+|---|---|
+| **Live app** | https://smartalingo.vercel.app |
+| **API docs** | https://smartalingo-api.onrender.com/docs |
+| **Repository** | https://github.com/Vishy204/smartalingo |
 
-> The backend is on Render's free tier. If the first load hangs for 30–50s, the server is waking up.
+> The backend runs on Render's free tier. If the first request takes a while, the server is starting up.
 
----
+## A note on focus
 
-## A note to the Scaler AI Labs team
-
-I know this assignment is evaluated as a full-stack project: UI fidelity, schema, API design, code
-quality. I built that part properly. The path, all five exercise types, hearts, streaks, XP,
-leagues, quests and achievements all work.
-
-But I want to be upfront: **I put most of my effort into the agentic part.** If the evaluation were
-only about full-stack polish, that's honestly not where I'm strongest, and I'd rather not pretend
-otherwise. Agents are what I'm good at and what I want to work on. A Duolingo clone that replays a
-fixed list of questions is a quiz app. What makes a tutor useful is noticing *why* you keep getting
-something wrong and changing what you practise next. That's what I built, and it's the part I'd ask
-you to look at most closely.
+The assignment is evaluated as a full-stack project, and every core feature in the brief is implemented.
+I chose to spend extra time on an agentic tutor built with the OpenAI Agents SDK, which studies each
+learner's mistakes and rewrites their practice. Full-stack polish is not my strongest area; agents are,
+so I would ask you to look at that part closely. It is documented in [Adaptive tutor](#adaptive-tutor-agents).
 
 ---
 
-## Try it in 3 minutes
+## Table of contents
 
-1. Click **Get started**. You get your own learner with a few days of history. That history
-   deliberately contains a pattern: mostly *el/la* gender mistakes and missing accents.
-2. Within ~30s the tutor has analysed it. A purple **Smarto's Practice** node appears on the path and the
-   right rail explains what Smarto noticed.
-3. Open **Smarto → How Smarto learns**. You see the latest adaptation in four steps: *what Smarto saw* (your
-   mistakes by type), *what it concluded* (each weak topic, the evidence, the likely reason, and the
-   exact mistakes that led there), *what it changed*, and *the exercises it wrote for you*.
-4. **Check it adapts to new behaviour.** Under *Try it: give Smarto new mistakes*, pick a learner type
-   ("Confuses verb forms", "Scrambles word order", "Recognises but can't produce"...). It adds ~14
-   realistic wrong answers through the real grader and re-runs the agents. The steps fill in live, so
-   you can check the diagnosis matches what you picked. Or play a lesson and get things wrong on purpose.
-5. **Custom Practice** (sidebar): pick up to 3 topics and press *Build practice*. Smarto builds it in
-   ~30s, a notification pops up when it's ready (and a browser notification if you allowed it), and it
-   stays in the tab so you can start it, or practise it again, any time. Custom practice never costs
-   hearts, and topics you haven't reached in the course work too.
-6. **Smarto → Talk to Smarto**: ask in text or by voice, e.g. *"Is hola amigo correct?"*, or *"make me a
-   practice on animal names"*. Smarto builds a practice on exactly the topics you named (nothing extra)
-   and tells you to check the Custom Practice tab once it's ready.
+1. [Feature coverage](#feature-coverage)
+2. [Tech stack](#tech-stack)
+3. [Setup](#setup)
+4. [Architecture](#architecture)
+5. [Database schema](#database-schema)
+6. [API overview](#api-overview)
+7. [Adaptive tutor (agents)](#adaptive-tutor-agents)
+8. [Testing](#testing)
+9. [Deployment](#deployment)
+10. [Assumptions](#assumptions)
+11. [Project structure](#project-structure)
 
 ---
 
-## How the agentic tutor works
+## Feature coverage
 
-### Two layers
+| Brief | Implementation |
+|---|---|
+| **Learning path** | 3 units, 11 lesson levels, 3 chests and 3 trophies on a snaking path. Locked, available and completed states, progress rings, crowns, a "Start" bubble, unit guidebooks. Top bar with streak, gems and hearts. |
+| **Lesson player** | Multiple choice, translate with a word bank (or keyboard), match pairs, fill in the blank, type the answer. Feedback bar with the correct solution, progress bar, combo counter, wrong answers re-queued at the end, keyboard shortcuts. |
+| **Hearts** | One lost per mistake, regenerate over time (1 every 4 hours), refill with gems, or earn back through practice. Out-of-hearts modal. |
+| **Gamification** | XP, daily goal, streak with streak freezes, daily quests, 11 achievements, a weekly league with seeded learners, gems and shop. Day logic can be simulated from Settings. |
+| **Persistence** | All progress (XP, streak, hearts, skills, achievements, attempts) is stored per learner in SQLite. |
+| **Content** | One Spanish course (21 lessons, ~250 exercises) seeded from authored content. A sample learner with partial progress is created on first visit. |
+| **Profile** | Streak, XP, lessons, achievements with progress, weekly XP chart, streak calendar, per-topic mastery. |
+| **Experience** | Original mascot (Smarto), animated feedback, lesson-complete and streak celebrations with confetti, modals, toasts, sound effects, settings. |
+| **Placeholders** | Speaking exercises, friends, Super, more languages and notifications show "Coming soon". |
+| **Bonus** | Text-to-speech for prompts, achievements, a working leaderboard, Legendary timed challenge, dark mode, responsive layout. |
+| **Beyond the brief** | Adaptive AI tutor, Custom Practice tab, chat tutor, real-time voice tutor ([details](#adaptive-tutor-agents)). |
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS v4, TanStack Query, Motion, lucide-react |
+| Backend | Python 3.13, FastAPI, SQLAlchemy 2, Pydantic v2, PyJWT |
+| Database | SQLite (WAL mode) |
+| AI | OpenAI Agents SDK (`gpt-5-mini`), Pipecat for voice (Deepgram speech-to-text and text-to-speech, Cerebras LLM) |
+| Hosting | Vercel (frontend), Render with Docker (backend) |
+| Tooling | pytest, Ruff, ESLint, GitHub Actions |
+
+---
+
+## Setup
+
+**Requirements:** Python 3.12+ and Node.js 20.9+.
+
+```bash
+# Backend
+cd backend
+python -m venv .venv
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env                   # optional keys: OPENAI_API_KEY, DEEPGRAM_API_KEY, CEREBRAS_API_KEY
+uvicorn app.main:app --port 8000       # creates and seeds the database on first start
+
+# Frontend (new terminal)
+cd frontend
+cp .env.example .env.local             # NEXT_PUBLIC_API_URL=http://localhost:8000
+npm install
+npm run dev                            # http://localhost:3000
+```
+
+The app runs fully without API keys: the tutor falls back to its rules engine and the voice tutor is hidden.
+To reset the database: `python -m app.seed.seed --reset`.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Frontend [Next.js on Vercel]
+      UI[Pages and components] --> Q[TanStack Query hooks] --> C[Typed API client]
+    end
+    subgraph Backend [FastAPI on Render]
+      R[API routes<br/>api/v1] --> S[Services<br/>lesson engine, grading, gamification]
+      S --> M[SQLAlchemy models]
+      R -- background tasks --> A[Agent pipeline<br/>agents/]
+      A --> M
+      V[Voice WebSocket<br/>voice/] --> A
+    end
+    C -- REST + bearer token --> R
+    UI -- WebSocket --> V
+    M --> DB[(SQLite)]
+    A --> OAI[(OpenAI)]
+    V --> EXT[(Deepgram, Cerebras)]
+```
+
+**Backend layers** (`backend/app`)
+
+| Layer | Responsibility |
+|---|---|
+| `api/v1/` | Thin HTTP routes: validation, auth dependency, response shaping |
+| `services/` | Domain logic: lesson engine, grading, hearts, streaks, XP, mastery, achievements, leaderboard |
+| `models/` | SQLAlchemy models (content, learner, activity, agent) |
+| `agents/` | Tutor agents, tools, schemas, orchestration, validation, rules fallback |
+| `voice/` | Real-time voice pipeline and WebSocket route |
+| `seed/` | Authored course content and exercise builder |
+
+Services never import agents; agents read the database only through read models in `agents/learner_data.py`.
+Domain rule violations raise a `GameError`, which the API maps to an HTTP error.
+
+**Frontend** (`frontend/src`): pages in `app/`, components grouped by domain (`shell`, `path`, `lesson`,
+`exercises` with one component per exercise type, `tutor`, `ui`), and a typed API client with query hooks in `lib/`.
+
+**Key flows**
+
+- *Lesson loop:* `POST /sessions` builds the exercise queue (answers are never sent to the client) →
+  `POST /sessions/{id}/answers` grades on the server, updates hearts and mastery, re-queues mistakes →
+  `POST /sessions/{id}/complete` awards XP, updates the streak, progress and achievements, and schedules the tutor.
+- *Streak and daily goal:* derived from an XP ledger stamped with the learner's local day, so a day can be simulated per learner.
+
+---
+
+## Database schema
+
+```mermaid
+erDiagram
+    COURSES ||--o{ UNITS : contains
+    UNITS ||--o{ SKILLS : "path nodes"
+    SKILLS ||--o{ LESSONS : contains
+    LESSONS ||--o{ EXERCISES : contains
+    LESSONS ||--o{ LEXEMES : teaches
+    EXERCISES }o--o{ CONCEPTS : exercise_concepts
+    LEXEMES }o--o{ CONCEPTS : lexeme_concepts
+    USERS ||--o{ USER_SKILL_PROGRESS : has
+    SKILLS ||--o{ USER_SKILL_PROGRESS : tracks
+    USERS ||--o{ USER_CONCEPT_MASTERY : has
+    CONCEPTS ||--o{ USER_CONCEPT_MASTERY : tracks
+    USERS ||--o{ LESSON_SESSIONS : plays
+    LESSON_SESSIONS ||--o{ EXERCISE_ATTEMPTS : records
+    EXERCISES ||--o{ EXERCISE_ATTEMPTS : answered
+    USERS ||--o{ XP_EVENTS : earns
+    USERS ||--o{ USER_ACHIEVEMENTS : unlocks
+    ACHIEVEMENTS ||--o{ USER_ACHIEVEMENTS : awarded
+    USERS ||--o{ ADAPTIVE_PLANS : receives
+    ADAPTIVE_PLANS ||--o{ EXERCISES : generates
+    ADAPTIVE_PLANS ||--o{ AGENT_RUNS : logs
+    USERS ||--o{ TUTOR_MESSAGES : sends
+```
+
+### Content
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `courses` | `slug` (unique), `title`, `from_lang`, `to_lang` | One seeded course (Spanish for English speakers). |
+| `units` | `course_id` → courses, `position`, `title`, `color`, `guidebook` (JSON) | Unique `(course_id, position)`. |
+| `skills` | `unit_id` → units, `position`, `title`, `kind` | Path nodes. `kind` = `lesson`, `chest` or `trophy`. Unique `(unit_id, position)`. |
+| `lessons` | `skill_id` → skills, `position`, `title` | Unique `(skill_id, position)`. |
+| `exercises` | `lesson_id` → lessons (nullable), `type`, `prompt`, `payload` (JSON), `difficulty`, `source`, `owner_user_id` → users, `plan_id` → adaptive_plans, `rationale` | `payload` holds the type-specific content and answer (contracts in `services/exercise_types.py`). `source` = `seed` or `agent`; agent-written exercises belong to one learner and one plan. |
+| `concepts` | `key` (unique), `name`, `category`, `tip` | Grammar and vocabulary topics (e.g. `grammar.gender_articles`). |
+| `exercise_concepts`, `lexeme_concepts` | composite keys | Many-to-many links to concepts. |
+| `lexemes` | `lesson_id` → lessons, `text`, `translation` | Vocabulary taught per lesson; also limits which words AI-written exercises may use. |
+
+### Learner and progress
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `users` | `username` (unique), `total_xp`, `gems`, `hearts`, `hearts_updated_at`, `streak_count`, `longest_streak`, `last_active_date`, `streak_freezes`, `daily_goal_xp`, `clock_offset_days`, `settings` (JSON), `is_bot` | Hearts regenerate lazily from `hearts_updated_at`. `clock_offset_days` simulates days. `is_bot` marks seeded league learners. |
+| `user_skill_progress` | `user_id`, `skill_id`, `lessons_completed`, `crowns`, `is_legendary`, `completed_at` | Unique `(user_id, skill_id)`. Drives node states on the path. |
+| `user_concept_mastery` | `user_id`, `concept_id`, `mastery` (0–1), `attempts`, `correct`, `recognition_*`, `production_*`, `correct_streak`, `next_review_at` | Unique `(user_id, concept_id)`. Updated on every answer; recognition (choosing) and production (typing) are tracked separately. |
+| `achievements` | `key` (unique), `title`, `metric`, `threshold` | Badge definitions. |
+| `user_achievements` | `user_id`, `achievement_id`, `unlocked_at` | Unique `(user_id, achievement_id)`. |
+
+### Activity
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `lesson_sessions` | `user_id`, `lesson_id`, `skill_id`, `plan_id`, `mode`, `status`, `queue` (JSON), `answered`, `hearts_lost`, `xp_earned`, `accuracy`, `day` | `mode` = `lesson`, `practice`, `personalized` or `legendary`. `queue` grows when mistakes are re-queued. |
+| `exercise_attempts` | `session_id`, `user_id`, `exercise_id`, `answer` (JSON), `is_correct`, `is_typo`, `error_type`, `time_ms` | Every answer. `error_type` classifies the mistake (e.g. `gender_article`, `verb_form`, `accent`). Index `(user_id, created_at)`. |
+| `xp_events` | `user_id`, `amount`, `source`, `day` | Append-only XP ledger. Daily goal, streak calendar and weekly league are queries over it. Index `(user_id, day)`. |
+
+### Tutor
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `adaptive_plans` | `user_id`, `status`, `trigger`, `engine`, `diagnosis` (JSON), `plan` (JSON), `focus_concepts`, `summary` | One per tutor run. Status `pending → ready → consumed`, or `superseded` / `failed`. Index `(user_id, status)`. |
+| `agent_runs` | `user_id`, `plan_id`, `parent_id`, `kind`, `agent_name`, `status`, `output` (JSON), `tool_calls`, `input_tokens`, `output_tokens`, `latency_ms`, `trace_id` | One row per agent call; also counts toward the daily AI limit. Index `(user_id, created_at)`. |
+| `tutor_messages` | `user_id`, `role`, `content`, `channel`, `blocked` | Chat and voice transcripts. |
+
+**Design choices**
+
+- The content hierarchy uses ordered positions with unique constraints, so paths render deterministically.
+- Exercise content is JSON per type, which keeps one `exercises` table for all five types and for AI-written items.
+- Concepts link content to learner mastery, which is what both the path recommendations and the agents reason about.
+- XP is stored as events rather than a running counter per day, so daily, weekly and calendar views need no extra tables.
+- Foreign keys cascade on delete, and every hot query has an index.
+
+---
+
+## API overview
+
+All routes are under `/api/v1` and require `Authorization: Bearer <token>` except guest creation. Interactive docs: `/docs`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/auth/guest` | Create a learner with sample progress and return a token |
+| GET | `/me` | Learner state (applies heart regeneration and streak checks) |
+| PATCH | `/me/settings` | Name, daily goal, sound, dark mode |
+| GET | `/path` | Units and nodes with status and progress |
+| POST | `/path/chest/{skill_id}` | Open a treasure chest |
+| GET | `/profile` | Stats, achievements, XP history, mastery |
+| GET | `/quests` | Daily quests |
+| GET | `/leaderboard` | Weekly league |
+| POST | `/shop/refill-hearts`, `/shop/streak-freeze` | Gem purchases (mocked currency) |
+| POST | `/dev/advance-day` | Simulate the next day for this learner |
+| POST | `/sessions` | Start a lesson, practice, personalized or legendary session |
+| POST | `/sessions/{id}/answers` | Grade one answer on the server |
+| POST | `/sessions/{id}/complete` | Award XP, update streak, progress and achievements |
+| POST | `/sessions/{id}/quit` | Abandon a session |
+| GET | `/tutor/insights` | Latest tutor plans for the right rail and notifications |
+| GET | `/tutor/brain` | Full tutor history for the "How Smarto learns" tab |
+| GET, POST | `/tutor/custom` | Custom Practice: topics with mastery and practices; build one |
+| POST | `/tutor/plan` | Re-run the tutor now |
+| POST | `/tutor/simulate` | Add realistic sample mistakes for a learner type (demo tool) |
+| GET, POST | `/tutor/chat` | Chat history and send a message |
+| POST | `/tutor/explain` | Explain a wrong answer |
+| GET | `/voice/status` | Voice availability and remaining chats |
+| POST | `/voice/ticket` | Single-use ticket for the voice WebSocket |
+| WS | `/voice/ws?ticket=` | Real-time voice session |
+
+---
+
+## Adaptive tutor (agents)
+
+### Overview
+
+Two layers keep the lesson fast while the tutor stays smart:
 
 ```
-every answer  ->  deterministic learner model (instant, no LLM)   ->  in-lesson adaptation
-                  error type · per-topic mastery · spaced review       (missed items come back)
+every answer  ->  deterministic learner model (no LLM)        ->  in-lesson adaptation
+                  error type, per-topic mastery, spaced review     (mistakes come back)
                           |
-lesson ends   ->  multi-agent pipeline in the background           ->  next practice is rewritten
+lesson ends   ->  multi-agent pipeline in the background       ->  next practice is rewritten
                   diagnose -> plan -> write -> validate
 ```
 
-The lesson never waits for an LLM. Grading and the learner model are deterministic and run on every
-answer; the agents run after the lesson, so their latency is invisible.
+The grader classifies every wrong answer (`gender_article`, `agreement`, `verb_form`, `accent`,
+`word_order`, `missing_word`, `extra_word`, `vocabulary`) and updates per-topic mastery. The agents run
+after the lesson, or immediately when the learner asks, and never block the lesson.
 
-**Every answer becomes a signal.** The grader doesn't just say right or wrong. It classifies the
-mistake: `gender_article` (*la pan*), `agreement` (*la manzana es rojo*), `verb_form` (*yo come*),
-`accent` (*adios*, accepted as a typo but logged), `word_order`, `missing_word`, `extra_word`,
-`vocabulary`. Each exercise is tagged with concepts, and every learner has a mastery score per
-concept, tracked separately for **recognition** (choosing) and **production** (typing/building).
-
-### The pipeline
+### Pipeline
 
 ```mermaid
 flowchart LR
-    T([lesson done / chat / voice /<br/>test mistakes]) --> A[Learner Analyst]
+    T([lesson completed / custom request /<br/>chat / voice]) --> A[Learner Analyst]
     A -- tools --> DB[(learner data)]
     A --> P[Curriculum Planner]
     P --> G[Exercise Generator]
     G -- get_course_lexicon --> DB
     G --> V{Validator<br/>guardrail}
-    V -- too many invalid --> G
+    V -- most items invalid --> G
     V -- valid --> S[(adaptive plan +<br/>new exercises)]
-    A -. no key / error / budget .-> F[Rules fallback] --> S
+    A -. no key / error / limit .-> F[Rules engine] --> S
 ```
 
-| Agent | What it does |
-|---|---|
-| **Learner Analyst** | Works out *why* you fail, not just where. Investigates with four tools (`get_concept_mastery`, `get_error_breakdown`, `get_recent_mistakes`, `get_session_history`) and returns a typed `LearnerDiagnosis`: weak topics, severity, recognition vs production weakness, evidence quoted from the data, and the likely misconception. |
-| **Curriculum Planner** | Turns the diagnosis into a typed `PracticePlan`: which topics, how many items, and which formats (a recognition weakness gets choose/match; a production weakness gets type/translate), plus a short message to the learner. |
-| **Exercise Generator** | Writes new exercises in the app's exact format. It must call `get_course_lexicon` first and may only use words the learner has been taught. Distractors are designed to probe the misconception. |
-| **Validator** (output guardrail) | Deterministic checks on every generated item: real concepts, answer among the choices, grounding (only taught words), and the answer must grade as correct through the real grader. If too many fail, the generator gets one repair round with the errors. Gaps are filled with course exercises. |
-| **Smarto (chat)** | A conversational tutor. Uses the Analyst via `.as_tool()`, a fast `get_learning_snapshot` tool, `explain_concept`, and an action tool `create_practice` that kicks off the pipeline. An input guardrail agent blocks off-topic requests and prompt injection. |
-| **Mistake Explainer** | "Why?" on a wrong answer. Gets the task, your answer, the correct answer, the error type and the rule; returns a short typed explanation (~1.5s). |
+| Agent | Role | Output |
+|---|---|---|
+| Learner Analyst | Finds why the learner fails, using tools for mastery, error breakdown, recent mistakes and session history | `LearnerDiagnosis`: weak topics, severity, recognition vs production, evidence, likely misconception |
+| Curriculum Planner | Turns the diagnosis into a session and picks formats (recognition gaps → choose/match, production gaps → type/translate) | `PracticePlan` |
+| Exercise Generator | Writes exercises in the app's formats, using only vocabulary from `get_course_lexicon` | `GeneratedSet` |
+| Validator (output guardrail) | Checks concepts, answers, blanks, pairs, vocabulary grounding, and that every answer grades correct through the real grader; one repair round if most of a batch fails | Valid exercises |
+| Smarto (chat) | Conversational tutor; uses the Analyst via `.as_tool()`, `get_learning_snapshot`, `explain_concept`, and `create_practice`; behind an input guardrail for off-topic requests and prompt injection | Reply |
+| Mistake Explainer | Explains a specific wrong answer | `Explanation` |
 
-### Design decisions
+**Design decisions**
 
-- **Code-orchestrated, not LLM-routed.** The order is fixed and every hand-off is a Pydantic schema.
-  Each agent still reasons and calls tools on its own. Agent intelligence, pipeline debuggability.
-- **Never trust the LLM blindly.** Plans are bounds-checked, generated exercises are validated, and one
-  teaching rule lives in code: *a production weakness is trained mostly by producing*. The evals
-  caught the planner drifting on this, so I enforced it instead of hoping.
-- **Practice on demand.** The Custom Practice tab (`POST /tutor/custom`) and Smarto's `create_practice`
-  tool (chat and voice) start the same pipeline with your topics. An explicit request is never dropped
-  (it waits behind a running update), the topics you asked for override the planner, and they may use
-  course lessons you haven't reached yet. Custom practices are their own family: they stay in the tab
-  and are never replaced by the automatic plan behind the path's Smarto's Practice node. A requested
-  topic gets ~8 exercises in mixed formats; course top-ups stay on topic and never repeat a sentence.
-- **Always adapts.** No API key, budget used up, or an exception: a rules engine produces the same
-  outputs with zero LLM calls.
-- **Observable.** Every agent call is stored in `agent_runs` (status, latency, tokens, tool calls,
-  output, trace id) and traced in the OpenAI dashboard. The "How Smarto learns" tab reads from this.
-- **Safe to run in public.** One pipeline per learner at a time, a limit of 15 AI actions per learner per day
-  (tutor updates, custom practices, chat messages, explanations; after that the rules engine takes over),
-  25 voice chats per IP per day,
-  `max_turns` and token caps, rate limits, and the LLM can never pick a user id (tools read it from
-  the run context).
+- **Code-orchestrated pipeline.** The order is fixed and every hand-off is a typed Pydantic schema; each agent still reasons and calls tools independently.
+- **Deterministic guard-rails.** Plans are bounds-checked in code, and one teaching rule is enforced: a production weakness is trained mostly by producing.
+- **Graceful fallback.** Without an API key, after an error, or past the daily limit, a rules engine produces the same outputs with no LLM calls.
+- **Observability.** Every agent call is stored in `agent_runs` and traced; the "How Smarto learns" tab shows each update as four steps: what Smarto saw, concluded, changed, and wrote.
+- **Limits.** One pipeline per learner at a time, 15 AI actions per learner per day, 25 voice chats per IP per day, `max_turns`, and tools that read the learner from the run context rather than from model arguments.
 
-### Where you see the adaptation
+### Custom Practice
 
-The **Smarto's Practice** node, up to 2 personalised exercises mixed into regular lessons, "practice to
-earn hearts" targeting weak topics, the insights card, the **Custom Practice** tab, and the **How Smarto
-learns** tab.
+A sidebar tab where the learner picks up to three topics and receives a practice on exactly those topics in about 30 seconds.
+Asking Smarto in chat or by voice ("make me a practice on animal names") creates the same kind of practice.
+
+- Only the requested topics are used; the planner's choice is overridden in code.
+- Each request gets about eight exercises in mixed formats, including topics not yet reached in the course.
+- Course exercises used to fill gaps stay on topic and are never repeated in a session.
+- Custom practices are kept in the tab, can be replayed, do not cost hearts, and trigger a notification when ready.
 
 ### Voice tutor
 
 ```
-mic -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras LLM -> Deepgram TTS -> speaker
+microphone -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras LLM -> Deepgram TTS -> speaker
 ```
 
-Everything streams, and the learner's weak topics are pre-loaded into the prompt instead of fetched
-with a tool, so Smarto answers in about 2–4s end to end on the hosted server. Start-up is tuned too:
-the greeting is spoken straight to text-to-speech (no LLM call), the browser preloads the voice client,
-the server warms the voice stack at boot, and a scheduled ping keeps the free instance from sleeping.
-Slow work is handed off:
-`create_practice` schedules the agent pipeline in the background. It uses WebSocket instead of WebRTC
-because PaaS hosts don't route WebRTC's UDP. The browser exchanges its token for a single-use 60s
-ticket, so no long-lived token ends up in a URL.
+Every stage streams, and the learner's weak topics are loaded into the prompt in advance, so answers take about
+2–4 seconds. The greeting is spoken directly without an LLM call, the voice stack is warmed at server start, and the
+learner can switch the microphone on and off during a call. WebSocket is used instead of WebRTC because the host
+does not route WebRTC's UDP traffic.
 
-### Evals
+### Evaluations
 
-`python -m evals.run` creates a fresh learner per synthetic profile (gender, accents, production,
-word order, verbs), injects that profile's mistakes, runs the real pipeline, and checks that the
-right topic is diagnosed first, the plan focuses on it, and the exercise formats match the weakness.
-**Latest run: 27/27.** The first run was 26/27, which is how I found the production-practice drift above.
+`python -m evals.run` creates a learner per synthetic profile (gender, accents, production, word order, verbs),
+injects that profile's mistakes, runs the real pipeline, and checks that the right topic is diagnosed first,
+the plan targets it, and the formats match the weakness. Latest run: **27/27**.
 
 ### Where the code lives
 
-| Folder / file | What's inside |
+| Path | Contents |
 |---|---|
-| `backend/app/agents/pipeline.py` | The orchestrator: runs Analyst → Planner → Generator → Validator, plan guard-rails, saving, rules fallback |
-| `backend/app/agents/definitions.py` | Every agent and its prompt |
-| `backend/app/agents/schemas.py` | The typed (Pydantic) outputs each agent must return |
-| `backend/app/agents/tools.py`, `learner_data.py` | The tools agents call and the database read models behind them |
-| `backend/app/agents/validation.py` | The output guardrail that checks every generated exercise |
-| `backend/app/agents/duo.py` | Smarto chat: topic guard, tools (`create_practice` …), "Why?" explanations |
-| `backend/app/agents/fallback.py`, `observability.py` | Rules engine without an LLM; `agent_runs` logging and the daily limit |
-| `backend/app/voice/` | Voice tutor: Pipecat pipeline (`pipeline.py`) and WebSocket + tickets (`routes.py`) |
-| `backend/app/services/grading.py`, `mastery.py` | Error classification and the per-topic learner model |
-| `backend/evals/run.py` | Behavioural evals of the agents |
-| `frontend/src/components/tutor/` | Chat, voice, and the "How Smarto learns" page |
-| `frontend/src/app/(app)/custom/` | The Custom Practice tab (topic picker, practice list, notifications in `AppShell.tsx`) |
+| `backend/app/agents/pipeline.py` | Orchestrator, plan guard-rails, generate-validate-repair loop, persistence |
+| `backend/app/agents/definitions.py`, `schemas.py` | Agents, prompts and typed outputs |
+| `backend/app/agents/tools.py`, `learner_data.py` | Agent tools and the read models behind them |
+| `backend/app/agents/validation.py`, `fallback.py` | Output guardrail and rules engine |
+| `backend/app/agents/duo.py` | Smarto chat and mistake explanations |
+| `backend/app/voice/` | Voice pipeline and WebSocket route |
+| `backend/app/services/grading.py`, `mastery.py` | Error classification and the learner model |
+| `frontend/src/app/(app)/custom/`, `components/tutor/` | Custom Practice tab, chat, voice, "How Smarto learns" |
 
 ---
 
-## The full-stack part
-
-**Features:** a snaking learning path (3 units, 11 lesson levels, chests, trophies, guidebooks);
-five exercise types (multiple choice, word-bank translation, match pairs, fill the blank, type the
-answer); the green/red feedback bar with mistakes re-queued; hearts with regeneration and refills;
-XP, daily goal, streaks with freezes; daily quests, 11 achievements, a weekly league; a Custom Practice tab; profile,
-shop, dark mode, mobile layout. Smarto (the violet bird mascot) and the icons are original; no Duolingo assets are used.
-
-**Architecture:** `backend/app/api` (thin routes) → `services` (lesson engine, grading, gamification)
-→ `models` (SQLAlchemy). `agents/` sits beside `services/` and reads through read models in
-`learner_data.py`. The frontend uses a typed API client and TanStack Query.
-
-### Database schema
-
-| Table | Purpose |
-|---|---|
-| `courses → units → skills → lessons → exercises` | Content. `exercises.payload` is JSON per type; `source` is seed or agent. Agent rows carry `owner_user_id`, `plan_id` and `rationale`. |
-| `concepts`, `exercise_concepts`, `lexemes`, `lexeme_concepts` | What the learner model and agents reason about; lexemes (taught words) ground the generator. |
-| `users` | XP, gems, hearts (+ regen timestamp), streak, freezes, daily goal, `clock_offset_days` for demo time travel. |
-| `user_skill_progress` | Progress and crowns per path node. |
-| `user_concept_mastery` | Mastery 0–1, recognition vs production counts, `next_review_at`. |
-| `lesson_sessions`, `exercise_attempts` | Every session and every answer, with its `error_type`. |
-| `xp_events` | XP ledger; daily goal, streak calendar and league are queries over it. |
-| `achievements`, `user_achievements` | Badges. |
-| `adaptive_plans` | Agent output: diagnosis, plan, learner message, status `pending → ready → consumed`. |
-| `agent_runs` | One row per agent call (observability and the daily budget). |
-| `tutor_messages` | Chat and voice transcripts (Smarto's memory). |
-
-### API (`/api/v1`, bearer token, docs at `/docs`)
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /auth/guest` | Create your own learner + token |
-| `GET /me`, `GET /path`, `GET /profile`, `GET /leaderboard`, `GET /quests` | App state |
-| `POST /sessions`, `POST /sessions/{id}/answers`, `POST /sessions/{id}/complete` | Lesson loop, graded server-side; completing a lesson triggers the tutor |
-| `GET /tutor/brain`, `POST /tutor/plan`, `POST /tutor/simulate` | How Smarto learns, re-run, inject test mistakes |
-| `GET /tutor/custom`, `POST /tutor/custom` | Custom Practice: topics with mastery and your practices; build one (1–3 topics) |
-| `POST /tutor/chat`, `POST /tutor/explain` | Chat and mistake explanations |
-| `POST /voice/ticket`, `WS /voice/ws` | Voice session |
-
----
-
-## Security
-
-- **Keys never leave the server.** OpenAI, Deepgram and Cerebras keys live only in Render's environment
-  variables (and a gitignored local `.env`). The frontend's only setting is the public API URL.
-- **Audited** before submission: every real key was checked against the full git history and every JS
-  file the live site serves (no matches). GitHub secret scanning and push protection are on (0 alerts).
-  `npm audit`: 0 vulnerabilities. `pip-audit`: one advisory in `nltk` (a voice-library dependency) for
-  model-file APIs this app never calls; no patched version exists yet.
-- **Auth:** signed guest tokens, every query scoped to the token's learner (tested), and the LLM can never
-  choose a user id. There is no default JWT secret: if `JWT_SECRET` is missing, a random one is generated.
-- **Voice:** single-use 60s tickets instead of tokens in URLs, origin check, one live session per learner,
-  25 voice chats per IP per day (so creating new guests doesn't reset it).
-- **Real client IPs:** per-IP limits read the address Render's proxy appends (the last `X-Forwarded-For`
-  entry), so a client can't dodge them by sending its own header (tested).
-- **Abuse and cost:** CORS locked to the app's domains, rate limits, 15 AI actions per learner per day,
-  an input guardrail against prompt injection, server-side grading, security headers, non-root Docker
-  user, and least-privilege CI.
-
-## Run it locally
+## Testing
 
 ```bash
-# Backend (Python 3.12+)
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-cp .env.example .env        # OPENAI_API_KEY for agents; DEEPGRAM_API_KEY + CEREBRAS_API_KEY for voice
-uvicorn app.main:app --port 8000                    # seeds the database on first start
-pytest -q                                           # 36 tests
+pytest -q              # 36 tests: grading, streaks, hearts, full lesson loop over HTTP,
+                       # learner isolation, custom practice, validator, rules fallback
+python -m evals.run    # behavioural evaluation of the agents (requires OPENAI_API_KEY)
 
-# Frontend (Node 20.9+)
 cd ../frontend
-cp .env.example .env.local  # NEXT_PUBLIC_API_URL=http://localhost:8000
-npm install && npm run dev  # http://localhost:3000
+npx tsc --noEmit && npm run lint && npm run build
 ```
 
-Without API keys the app still works: the tutor uses the rules engine and voice is hidden.
+GitHub Actions runs the backend and frontend checks on every push.
 
-**Deployment:** frontend on Vercel, backend on Render (Docker, `render.yaml`). API keys live only in
-Render's environment variables, never in the frontend or git.
+---
+
+## Deployment
+
+| Part | Host | Configuration |
+|---|---|---|
+| Frontend | Vercel | Root `frontend/`; `NEXT_PUBLIC_API_URL` points to the backend |
+| Backend | Render (Docker) | `render.yaml`; environment variables for the AI keys, `CORS_ORIGINS` and `JWT_SECRET`; health check `/health` |
+
+Render's free disk is ephemeral, so the database is re-seeded on each deploy; if a stored token no longer
+matches a learner, the frontend creates a new guest automatically. A scheduled workflow keeps the free instance awake.
+
+---
 
 ## Assumptions
 
-- Auth is simplified per the brief: every visitor gets their own guest learner.
-- One course (Spanish for English speakers): 21 lessons, ~250 seeded exercises, plus agent-written ones per learner.
-- Days can be simulated per learner (Settings → Simulate next day) to test streaks.
-- The league is seeded learners; gems and Super are mocked.
-- The free Render disk is ephemeral, so the database re-seeds on restart and the app quietly creates a new guest.
+- Authentication is simplified as allowed by the brief: each visitor gets their own guest learner, identified by a signed token.
+- One language course is seeded; content is small but covers all five exercise types.
+- Days can be simulated per learner (Settings → Simulate next day) to test streaks and heart regeneration.
+- The league uses seeded learners whose weekly XP is generated deterministically.
+- Gems, Super and in-app purchases are mocked; speaking exercises, friends and more languages are placeholders.
+- Audio uses the browser's speech synthesis for prompts; the voice tutor is an extra feature.
+- The visual design follows Duolingo's style with an original mascot and icons; no Duolingo assets are used.
+
+---
+
+## Project structure
+
+```
+backend/
+  app/
+    api/v1/        learner, sessions, tutor routes
+    services/      lesson engine, grading, hearts, streaks, xp, mastery, progress, achievements,
+                   leaderboard, guests, simulator, plans
+    agents/        definitions, schemas, tools, pipeline, validation, fallback, duo, observability,
+                   learner_data
+    voice/         Pipecat pipeline, WebSocket route, config
+    models/        content, learner, activity, agent
+    seed/          authored course content, exercise builder, seeding
+  tests/  evals/  Dockerfile
+frontend/src/
+  app/             landing, (app)/learn, tutor, custom, leaderboard, quests, shop, profile,
+                   settings, soon/[feature], lesson/[id], practice
+  components/      shell, path, lesson, exercises, tutor, ui, Mascot
+  lib/             api client, query hooks, types, sound
+render.yaml  .github/workflows/
+```
