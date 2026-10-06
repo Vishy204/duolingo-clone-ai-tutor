@@ -40,7 +40,7 @@ def load_voice_config() -> VoiceConfig | None:
         llm_model=os.getenv("VOICE_LLM_MODEL", LLM_DEFAULT_MODEL.get(provider, "gpt-oss-120b")),
         stt_model=os.getenv("VOICE_STT_MODEL", "nova-3-general"),
         stt_language=os.getenv("VOICE_STT_LANGUAGE", "multi"),
-        tts_voice=os.getenv("VOICE_TTS_VOICE", "aura-2-thalia-en"),
+        tts_voice=os.getenv("VOICE_TTS_VOICE", "aura-2-selena-es"),
         vad_stop_secs=float(os.getenv("VOICE_VAD_STOP_SECS", "0.3")),
         max_session_secs=int(os.getenv("VOICE_MAX_SESSION_SECS", "180")),
         daily_sessions=int(os.getenv("VOICE_DAILY_SESSIONS", "25")),
