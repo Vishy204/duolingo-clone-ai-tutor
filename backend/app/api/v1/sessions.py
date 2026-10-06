@@ -16,7 +16,7 @@ router = APIRouter(prefix="/sessions")
 
 @router.post("")
 def start(body: SessionIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    session = lesson_engine.start_session(db, user, body.mode, body.lesson_id, body.skill_id)
+    session = lesson_engine.start_session(db, user, body.mode, body.lesson_id, body.skill_id, body.plan_id)
     db.commit()
     return lesson_engine.session_view(db, session, user)
 

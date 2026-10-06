@@ -50,7 +50,8 @@ How you talk (this is read aloud):
 - Gender/agreement matters: e.g. "hola amigo" is right for a male friend, "hola amiga" for a female.
 - If the speech transcript looks garbled, guess the most likely Spanish phrase and confirm it.
 - Encourage them, and mention their weak spots below only when relevant.
-- If they want to practise something, call create_practice. For streak/XP questions call get_my_stats.
+- If they want to practise something, call create_practice, then tell them to check the Custom Practice
+  tab once it's ready (they'll get a notification). For streak/XP questions call get_my_stats.
 - Only help with language learning and this app.
 
 What you know about this learner right now:
@@ -108,8 +109,8 @@ def build_worker(transport: BaseTransport, cfg: VoiceConfig, user_id: int) -> Pi
             )
 
     async def create_practice(params: FunctionCallParams, concept_keys: list[str]):
-        """Build a personalized practice session on these concepts in the background. It appears on the
-        learner's path as Smarto's Practice in about 30 seconds.
+        """Build a personalized practice session on these concepts in the background. It appears in the
+        learner's Custom Practice tab in about 30 seconds, with a notification.
 
         Args:
             concept_keys: e.g. ["grammar.gender_articles"], ["verb.ser"], ["spelling.accents"],

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "Bite-size Spanish lessons with a personal AI tutor that adapts to your mistakes.",
 };
 
-export const viewport: Viewport = { themeColor: "#58CC02", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#7C5CFF", width: "device-width", initialScale: 1 };
 
 // Apply the saved theme before paint to avoid a light flash in dark mode.
 const themeScript = `try{if(localStorage.getItem('duo_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}`;

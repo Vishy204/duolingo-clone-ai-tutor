@@ -42,7 +42,7 @@ function TutorTabs() {
               aria-selected={active}
               onClick={() => router.replace(`${pathname}?tab=${t.key}`, { scroll: false })}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-[15px] font-extrabold uppercase tracking-wide transition-colors ${
-                active ? "bg-duo-blue-light text-duo-blue border-2 border-duo-blue-border" : "border-2 border-transparent text-muted hover:bg-surface-2"
+                active ? "bg-brand-light text-brand border-2 border-brand-border" : "border-2 border-transparent text-muted hover:bg-surface-2"
               }`}
             >
               <t.Icon size={20} strokeWidth={2.5} /> {t.label}

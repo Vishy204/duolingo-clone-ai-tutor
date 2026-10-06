@@ -102,7 +102,7 @@ export default function FeedbackSheet({
           </button>
         ) : (
           !hideCheck && (
-            <button className={`btn w-full sm:w-44 ${canCheck ? "btn-green" : "btn-disabled"}`} disabled={!canCheck} onClick={onCheck}>
+            <button className={`btn w-full sm:w-44 ${canCheck ? "btn-brand" : "btn-disabled"}`} disabled={!canCheck} onClick={onCheck}>
               Check
             </button>
           )

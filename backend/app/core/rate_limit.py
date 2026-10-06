@@ -6,7 +6,8 @@ Good enough for a single Render instance; swap the store for Redis when scaling 
 import threading
 import time
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, status
+from starlette.requests import HTTPConnection
 
 
 class RateLimiter:
@@ -34,10 +35,13 @@ class RateLimiter:
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Slow down a little! Try again shortly.")
 
 
-def client_ip(request: Request) -> str:
+def client_ip(request: HTTPConnection) -> str:
+    """The caller's IP. Behind Render's proxy, X-Forwarded-For is "<whatever the client sent>, <real IP>":
+    the proxy appends the address it saw, so only the LAST entry can be trusted. Taking the first one
+    would let anyone dodge per-IP limits by sending their own header."""
     fwd = request.headers.get("x-forwarded-for")
     if fwd:
-        return fwd.split(",")[0].strip()
+        return fwd.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

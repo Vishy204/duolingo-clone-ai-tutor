@@ -211,7 +211,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
         <div className="relative h-4 flex-1 rounded-full bg-line">
           <motion.div
             className="h-4 rounded-full"
-            style={{ background: legendary ? "#CE82FF" : "#58CC02" }}
+            style={{ background: legendary ? "#CE82FF" : "#7C5CFF" }}
             animate={{ width: `${Math.max(progress * 100, 2)}%` }}
             transition={{ type: "spring", stiffness: 120, damping: 18 }}
           >

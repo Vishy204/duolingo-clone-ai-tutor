@@ -84,7 +84,7 @@ def get_learning_snapshot(ctx: RunContextWrapper[TutorContext]) -> str:
 @function_tool
 async def create_practice(ctx: RunContextWrapper[TutorContext], concept_keys: list[str]) -> str:
     """Build a new personalized practice session focused on these concepts. It is generated in the
-    background by the tutor pipeline and appears on the learner's path as "Smarto's Practice".
+    background by the tutor pipeline and appears in the learner's Custom Practice tab.
 
     Call it whenever the learner asks for practice on anything, as often as they ask. Use [] for
     "my weakest topics".
@@ -103,7 +103,8 @@ async def create_practice(ctx: RunContextWrapper[TutorContext], concept_keys: li
     ctx.context.requested_practice = keys
     pipeline.schedule(ctx.context.user_id, "chat", keys)
     return json.dumps({"status": "building", "focus": [catalog[k] for k in keys] or "your weakest topics",
-                       "eta_seconds": 30}, ensure_ascii=False)
+                       "eta_seconds": 30, "where": "Custom Practice tab (a notification appears when ready)"},
+                      ensure_ascii=False)
 
 
 def duo_agent() -> Agent[TutorContext]:

@@ -37,8 +37,11 @@ you to look at most closely.
    ("Confuses verb forms", "Scrambles word order", "Recognises but can't produce"...). It adds ~14
    realistic wrong answers through the real grader and re-runs the agents. The steps fill in live, so
    you can check the diagnosis matches what you picked. Or play a lesson and get things wrong on purpose.
-5. **Smarto → Talk to Smarto**: ask in text or by voice, e.g. *"Is hola amigo correct?"*, or ask for
-   practice on anything (*"make me a practice on animals"*). It's built in ~30s and a Start button appears in the chat.
+5. **Custom Practice** (sidebar): pick up to 3 topics and press *Build practice*. Smarto builds it in
+   ~30s, a notification pops up when it's ready (and a browser notification if you allowed it), and it
+   stays in the tab so you can start it, or practise it again, any time.
+6. **Smarto → Talk to Smarto**: ask in text or by voice, e.g. *"Is hola amigo correct?"*, or *"make me a
+   practice on animals"*. Smarto builds it and tells you to check the Custom Practice tab once it's ready.
 
 ---
 
@@ -94,22 +97,26 @@ flowchart LR
 - **Never trust the LLM blindly.** Plans are bounds-checked, generated exercises are validated, and one
   teaching rule lives in code: *a production weakness is trained mostly by producing*. The evals
   caught the planner drifting on this, so I enforced it instead of hoping.
-- **Practice on demand.** When you ask Smarto (chat or voice) for practice, `create_practice` starts the
-  pipeline with your topics. An explicit request is never dropped (it waits behind a running update),
-  the topics you asked for override the planner, and they may use course lessons you haven't reached yet.
+- **Practice on demand.** The Custom Practice tab (`POST /tutor/custom`) and Smarto's `create_practice`
+  tool (chat and voice) start the same pipeline with your topics. An explicit request is never dropped
+  (it waits behind a running update), the topics you asked for override the planner, and they may use
+  course lessons you haven't reached yet. Custom practices are their own family: they stay in the tab
+  and are never replaced by the automatic plan behind the path's Smarto's Practice node.
 - **Always adapts.** No API key, budget used up, or an exception: a rules engine produces the same
   outputs with zero LLM calls.
 - **Observable.** Every agent call is stored in `agent_runs` (status, latency, tokens, tool calls,
   output, trace id) and traced in the OpenAI dashboard. The "How Smarto learns" tab reads from this.
 - **Safe to run in public.** One pipeline per learner at a time, a limit of 15 AI actions per learner per day
-  (tutor updates, chat messages, explanations and voice sessions; after that the rules engine takes over),
+  (tutor updates, custom practices, chat messages, explanations; after that the rules engine takes over),
+  25 voice chats per IP per day,
   `max_turns` and token caps, rate limits, and the LLM can never pick a user id (tools read it from
   the run context).
 
 ### Where you see the adaptation
 
 The **Smarto's Practice** node, up to 2 personalised exercises mixed into regular lessons, "practice to
-earn hearts" targeting weak topics, the insights card, and the **How Smarto learns** tab.
+earn hearts" targeting weak topics, the insights card, the **Custom Practice** tab, and the **How Smarto
+learns** tab.
 
 ### Voice tutor
 
@@ -145,6 +152,7 @@ right topic is diagnosed first, the plan focuses on it, and the exercise formats
 | `backend/app/services/grading.py`, `mastery.py` | Error classification and the per-topic learner model |
 | `backend/evals/run.py` | Behavioural evals of the agents |
 | `frontend/src/components/tutor/` | Chat, voice, and the "How Smarto learns" page |
+| `frontend/src/app/(app)/custom/` | The Custom Practice tab (topic picker, practice list, notifications in `AppShell.tsx`) |
 
 ---
 
@@ -153,7 +161,7 @@ right topic is diagnosed first, the plan focuses on it, and the exercise formats
 **Features:** a snaking learning path (3 units, 11 lesson levels, chests, trophies, guidebooks);
 five exercise types (multiple choice, word-bank translation, match pairs, fill the blank, type the
 answer); the green/red feedback bar with mistakes re-queued; hearts with regeneration and refills;
-XP, daily goal, streaks with freezes; daily quests, 11 achievements, a weekly league; profile,
+XP, daily goal, streaks with freezes; daily quests, 11 achievements, a weekly league; a Custom Practice tab; profile,
 shop, dark mode, mobile layout. Smarto (the violet bird mascot) and the icons are original; no Duolingo assets are used.
 
 **Architecture:** `backend/app/api` (thin routes) → `services` (lesson engine, grading, gamification)
@@ -184,6 +192,7 @@ shop, dark mode, mobile layout. Smarto (the violet bird mascot) and the icons ar
 | `GET /me`, `GET /path`, `GET /profile`, `GET /leaderboard`, `GET /quests` | App state |
 | `POST /sessions`, `POST /sessions/{id}/answers`, `POST /sessions/{id}/complete` | Lesson loop, graded server-side; completing a lesson triggers the tutor |
 | `GET /tutor/brain`, `POST /tutor/plan`, `POST /tutor/simulate` | How Smarto learns, re-run, inject test mistakes |
+| `GET /tutor/custom`, `POST /tutor/custom` | Custom Practice: topics with mastery and your practices; build one (1–3 topics) |
 | `POST /tutor/chat`, `POST /tutor/explain` | Chat and mistake explanations |
 | `POST /voice/ticket`, `WS /voice/ws` | Voice session |
 
@@ -199,7 +208,10 @@ shop, dark mode, mobile layout. Smarto (the violet bird mascot) and the icons ar
   model-file APIs this app never calls; no patched version exists yet.
 - **Auth:** signed guest tokens, every query scoped to the token's learner (tested), and the LLM can never
   choose a user id. There is no default JWT secret: if `JWT_SECRET` is missing, a random one is generated.
-- **Voice:** single-use 60s tickets instead of tokens in URLs, origin check, one live session per learner.
+- **Voice:** single-use 60s tickets instead of tokens in URLs, origin check, one live session per learner,
+  25 voice chats per IP per day (so creating new guests doesn't reset it).
+- **Real client IPs:** per-IP limits read the address Render's proxy appends (the last `X-Forwarded-For`
+  entry), so a client can't dodge them by sending its own header (tested).
 - **Abuse and cost:** CORS locked to the app's domains, rate limits, 15 AI actions per learner per day,
   an input guardrail against prompt injection, server-side grading, security headers, non-root Docker
   user, and least-privilege CI.
@@ -213,7 +225,7 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements-dev.txt
 cp .env.example .env        # OPENAI_API_KEY for agents; DEEPGRAM_API_KEY + CEREBRAS_API_KEY for voice
 uvicorn app.main:app --port 8000                    # seeds the database on first start
-pytest -q                                           # 30 tests
+pytest -q                                           # 35 tests
 
 # Frontend (Node 20.9+)
 cd ../frontend

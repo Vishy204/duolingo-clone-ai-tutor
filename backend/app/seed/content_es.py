@@ -55,7 +55,7 @@ COURSE = {
         {
             "title": "Order in a café, greet people",
             "description": "Use basic phrases, food words and el/la",
-            "color": "#58CC02",
+            "color": "#7C5CFF",
             "guidebook": [
                 {"es": "Hola, buenos días", "en": "Hello, good morning"},
                 {"es": "Un café, por favor", "en": "A coffee, please"},
@@ -174,7 +174,7 @@ COURSE = {
         {
             "title": "Describe people and animals",
             "description": "Use ser, adjectives and plurals",
-            "color": "#CE82FF",
+            "color": "#B157E8",
             "guidebook": [
                 {"es": "El gato es pequeño", "en": "The cat is small"},
                 {"es": "Nosotros somos amigos", "en": "We are friends"},
@@ -275,7 +275,7 @@ COURSE = {
         {
             "title": "Talk about family and places",
             "description": "Use tener, questions and negation",
-            "color": "#1CB0F6",
+            "color": "#4F6BF5",
             "guidebook": [
                 {"es": "Yo tengo un hermano", "en": "I have a brother"},
                 {"es": "¿Dónde está el gato?", "en": "Where is the cat?"},

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Mascot from "../Mascot";
-import { NavLeague, NavLearn, NavMore, NavProfile, NavQuests, NavShop } from "../ui/Icons";
+import { NavCustom, NavLeague, NavLearn, NavMore, NavProfile, NavQuests, NavShop } from "../ui/Icons";
 
 const MascotIcon = ({ size = 32 }: { size?: number }) => (
   <div style={{ width: size, height: size }} className="grid place-items-center">
@@ -14,6 +14,7 @@ const MascotIcon = ({ size = 32 }: { size?: number }) => (
 export const NAV = [
   { href: "/learn", label: "Learn", Icon: NavLearn },
   { href: "/tutor", label: "Smarto", Icon: MascotIcon, badge: "NEW" },
+  { href: "/custom", label: "Custom Practice", Icon: NavCustom },
   { href: "/leaderboard", label: "Leaderboards", Icon: NavLeague },
   { href: "/quests", label: "Quests", Icon: NavQuests },
   { href: "/shop", label: "Shop", Icon: NavShop },
@@ -25,7 +26,7 @@ export default function Sidebar() {
   const path = usePathname();
   return (
     <aside className="sticky top-0 hidden h-screen w-[88px] shrink-0 flex-col border-r-2 border-line px-3 py-6 md:flex lg:w-[256px] lg:px-4">
-      <Link href="/learn" className="mb-6 hidden px-4 text-[32px] font-black tracking-tight text-duo-green lg:block">
+      <Link href="/learn" className="mb-6 hidden px-4 text-[32px] font-black tracking-tight text-brand lg:block">
         smartalingo
       </Link>
       <Link href="/learn" className="mb-6 grid place-items-center lg:hidden">
@@ -38,14 +39,14 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-5 rounded-xl border-2 px-3 py-2 text-[15px] font-extrabold uppercase tracking-wide transition-colors lg:px-4 ${
+              className={`flex items-center gap-4 rounded-xl border-2 px-3 py-2 text-[15px] font-extrabold uppercase tracking-wide transition-colors lg:px-4 ${
                 active
-                  ? "border-duo-blue-border bg-duo-blue-light text-duo-blue"
+                  ? "border-brand-border bg-brand-light text-brand"
                   : "border-transparent text-muted hover:bg-surface-2"
               }`}
             >
-              <Icon size={32} />
-              <span className="hidden lg:inline">{label}</span>
+              <span className="shrink-0"><Icon size={32} /></span>
+              <span className="hidden whitespace-nowrap lg:inline">{label}</span>
               {badge && (
                 <span className="ml-auto hidden rounded-md bg-duo-purple px-1.5 py-0.5 text-[10px] text-white lg:inline">
                   {badge}
@@ -59,11 +60,13 @@ export default function Sidebar() {
   );
 }
 
+const MOBILE = ["/learn", "/tutor", "/custom", "/leaderboard", "/quests", "/profile"];
+
 export function MobileNav() {
   const path = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t-2 border-line bg-surface md:hidden">
-      {NAV.slice(0, 6).map(({ href, label, Icon }) => {
+      {NAV.filter((n) => MOBILE.includes(n.href)).map(({ href, label, Icon }) => {
         const active = path === href || (href !== "/learn" && path.startsWith(href));
         return (
           <Link
@@ -71,7 +74,7 @@ export function MobileNav() {
             href={href}
             aria-label={label}
             className={`grid h-12 w-12 place-items-center rounded-xl border-2 ${
-              active ? "border-duo-blue-border bg-duo-blue-light" : "border-transparent"
+              active ? "border-brand-border bg-brand-light" : "border-transparent"
             }`}
           >
             <Icon size={28} />

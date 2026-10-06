@@ -80,15 +80,15 @@ export default function ChatPanel() {
         {err && <div className="text-sm text-duo-red">{err}</div>}
         {practiceAsked && (
           <div className="flex items-center gap-3 rounded-2xl border-2 border-duo-purple p-3 text-sm">
-            <Mascot size={36} animate={!!insights?.running} mood={insights?.running ? "think" : "happy"} />
+            <Mascot size={36} animate={insights?.latest_custom?.status === "pending"} mood={insights?.latest_custom?.status === "ready" ? "happy" : "think"} />
             <div className="flex-1 text-ink">
-              {insights?.running ? "Building your practice…" : insights?.ready_plan ? "Your practice is ready." : "Preparing your practice…"}
+              {insights?.latest_custom?.status === "ready"
+                ? "Your practice is ready in the Custom Practice tab."
+                : "Building your practice. It will appear in the Custom Practice tab."}
             </div>
-            {!insights?.running && insights?.ready_plan && (
-              <Link href="/practice?mode=personalized" className="btn btn-purple h-10 px-4 text-[13px]">
-                Start ({insights.ready_plan.exercise_count})
-              </Link>
-            )}
+            <Link href="/custom" className="btn btn-brand h-10 px-4 text-[13px]">
+              {insights?.latest_custom?.status === "ready" ? "Open" : "View"}
+            </Link>
           </div>
         )}
         <div ref={bottom} />
@@ -112,9 +112,9 @@ export default function ChatPanel() {
           onChange={(e) => setInput(e.target.value)}
           maxLength={500}
           placeholder="Ask Smarto…"
-          className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 text-ink outline-none focus:border-duo-blue-border"
+          className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 text-ink outline-none focus:border-brand-border"
         />
-        <button className="btn btn-blue h-11" disabled={!input.trim() || !!pending}>Send</button>
+        <button className="btn btn-brand h-11" disabled={!input.trim() || !!pending}>Send</button>
       </form>
     </div>
   );
@@ -126,7 +126,7 @@ function Bubble({ m }: { m: ChatMessage }) {
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-[15px] ${
-          mine ? "bg-duo-blue text-white" : m.blocked ? "border-2 border-duo-orange text-ink" : "border-2 border-line text-ink"
+          mine ? "bg-brand text-white" : m.blocked ? "border-2 border-duo-orange text-ink" : "border-2 border-line text-ink"
         }`}
       >
         {m.channel === "voice" && <Mic size={13} className="mr-1 inline opacity-70" />}

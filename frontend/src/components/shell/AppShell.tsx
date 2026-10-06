@@ -16,6 +16,8 @@ export function useLearnerEffects() {
   const toast = useToast();
   const invalidate = useInvalidateLearner();
   const lastPlan = useRef<number | null>(null);
+  // undefined = not loaded yet, so a practice that was already ready on page load doesn't notify.
+  const lastCustom = useRef<{ id: number; status: string } | null | undefined>(undefined);
 
   useEffect(() => {
     if (!me) return;
@@ -41,6 +43,35 @@ export function useLearnerEffects() {
     }
     if (id) lastPlan.current = id;
   }, [insights?.ready_plan?.id, insights?.ready_plan?.summary, toast, invalidate]);
+
+  const custom = insights?.latest_custom;
+  useEffect(() => {
+    if (insights === undefined) return;
+    const prev = lastCustom.current;
+    const now = custom ? { id: custom.id, status: custom.status } : null;
+    lastCustom.current = now;
+    if (prev === undefined || !now || now.status !== "ready") return;
+    if (prev && prev.id === now.id && prev.status === "ready") return;
+    toast({
+      title: "Your custom practice is ready",
+      body: custom?.summary || "Open the Custom Practice tab to start it.",
+      icon: <Sparkles className="text-brand" />,
+      tone: "purple",
+      action: { label: "Open", href: "/custom" },
+    });
+    notifyBrowser("Your custom practice is ready", custom?.summary || "Open Smartalingo to start it.");
+    invalidate();
+  }, [insights, custom, toast, invalidate]);
+}
+
+/** A system notification too, if the learner allowed it and is looking at another tab or app. */
+function notifyBrowser(title: string, body: string) {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
+    new Notification(title, { body, icon: "/icon.svg" });
+  } catch {
+    /* notifications unsupported (e.g. some mobile browsers) */
+  }
 }
 
 export default function AppShell({ children, rail = true, wide = false }: { children: React.ReactNode; rail?: boolean; wide?: boolean }) {

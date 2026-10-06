@@ -10,11 +10,13 @@ function Practice() {
   const params = useSearchParams();
   const mode = (params.get("mode") || "practice") as SessionData["mode"];
   const skill = params.get("skill");
+  const plan = params.get("plan"); // a specific practice from the Custom Practice tab
   const start = useCallback(
-    () => post<SessionData>("/sessions", { mode, skill_id: skill ? Number(skill) : null }),
-    [mode, skill],
+    () =>
+      post<SessionData>("/sessions", { mode, skill_id: skill ? Number(skill) : null, plan_id: plan ? Number(plan) : null }),
+    [mode, skill, plan],
   );
-  return <LessonPlayer key={`${mode}-${skill}`} start={start} />;
+  return <LessonPlayer key={`${mode}-${skill}-${plan}`} start={start} />;
 }
 
 export default function PracticePage() {

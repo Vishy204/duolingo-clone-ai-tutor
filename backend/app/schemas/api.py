@@ -19,6 +19,7 @@ class SessionIn(BaseModel):
     mode: Literal["lesson", "practice", "personalized", "legendary"] = "lesson"
     lesson_id: int | None = None
     skill_id: int | None = None
+    plan_id: int | None = None  # personalized: a specific practice (Custom Practice tab)
 
 
 class AnswerIn(BaseModel):
@@ -51,6 +52,10 @@ class ChatIn(BaseModel):
 
 class ExplainIn(BaseModel):
     attempt_id: int
+
+
+class CustomPracticeIn(BaseModel):
+    concepts: list[str] = Field(min_length=1, max_length=3)
 
 
 class PlanIn(BaseModel):

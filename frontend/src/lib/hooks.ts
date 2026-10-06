@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, post } from "./api";
-import type { Brain, Insights, Leaderboard, Me, PathData, Profile, Quest } from "./types";
+import type { Brain, CustomPracticeData, Insights, Leaderboard, Me, PathData, Profile, Quest } from "./types";
 
 export const keys = {
   me: ["me"] as const,
@@ -13,6 +13,7 @@ export const keys = {
   profile: ["profile"] as const,
   quests: ["quests"] as const,
   chat: ["chat"] as const,
+  custom: ["custom"] as const,
 };
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api<Me>("/me") });
@@ -21,6 +22,15 @@ export const useLeaderboard = () => useQuery({ queryKey: keys.leaderboard, query
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => api<Profile>("/profile") });
 export const useQuests = () =>
   useQuery({ queryKey: keys.quests, queryFn: async () => (await api<{ daily: Quest[] }>("/quests")).daily });
+
+/** The Custom Practice tab. Polls while a practice is being built. */
+export const useCustomPractice = () =>
+  useQuery({
+    queryKey: keys.custom,
+    queryFn: () => api<CustomPracticeData>("/tutor/custom"),
+    refetchInterval: (q) =>
+      q.state.data?.running || q.state.data?.practices.some((p) => p.status === "pending") ? 2500 : false,
+  });
 
 /** Polls while the tutor pipeline is running so new plans appear without a refresh. */
 export const useInsights = () =>
@@ -40,7 +50,7 @@ export const useBrain = () =>
 export function useInvalidateLearner() {
   const qc = useQueryClient();
   return () => {
-    for (const k of [keys.me, keys.path, keys.insights, keys.brain, keys.leaderboard, keys.profile, keys.quests]) {
+    for (const k of [keys.me, keys.path, keys.insights, keys.brain, keys.leaderboard, keys.profile, keys.quests, keys.custom]) {
       qc.invalidateQueries({ queryKey: k });
     }
   };

@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
-/* Duolingo palette (named like Duolingo's design tokens) */
+/* Smartalingo palette: violet brand (Smarto's colour), Duolingo-style semantic colours for feedback */
 :root {
-  --bg: #ffffff;
+  --bg: #fcfbff;
   --surface: #ffffff;
-  --surface-2: #f7f7f7;
-  --border: #e5e5e5;
-  --text: #4b4b4b;
-  --text-muted: #777777;
-  --text-faint: #afafaf;
+  --surface-2: #f5f2ff;
+  --border: #e6e1f5;
+  --text: #463f5e;
+  --text-muted: #746d8f;
+  --text-faint: #b0aac6;
+
+  --brand: #7c5cff;
+  --brand-dark: #5b3fe0;
+  --brand-light: #efebff;
+  --brand-border: #c3b5ff;
 
   --green: #58cc02;
   --green-dark: #58a700;
@@ -27,23 +32,25 @@
   --purple: #ce82ff;
   --purple-dark: #a568cc;
   --gem: #1cb0f6;
-  --locked: #e5e5e5;
-  --locked-dark: #b7b7b7;
+  --locked: #e6e1f5;
+  --locked-dark: #bcb4d6;
 }
 
 :root[data-theme="dark"] {
-  --bg: #131f24;
-  --surface: #131f24;
-  --surface-2: #202f36;
-  --border: #37464f;
-  --text: #f1f7fb;
-  --text-muted: #c7d4db;
-  --text-faint: #52656d;
+  --bg: #15112a;
+  --surface: #15112a;
+  --surface-2: #221c3d;
+  --border: #352d5c;
+  --text: #f2effc;
+  --text-muted: #c9c2e6;
+  --text-faint: #5f5885;
+  --brand-light: #2a2253;
+  --brand-border: #5b4bb0;
   --green-light: #233b1c;
   --blue-light: #1c3b4a;
   --red-light: #3f2226;
-  --locked: #37464f;
-  --locked-dark: #1f2d33;
+  --locked: #352d5c;
+  --locked-dark: #231d40;
 }
 
 @theme inline {
@@ -54,6 +61,10 @@
   --color-ink: var(--text);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-brand-border: var(--brand-border);
   --color-duo-green: var(--green);
   --color-duo-green-dark: var(--green-dark);
   --color-duo-green-light: var(--green-light);
@@ -116,14 +127,15 @@ body {
 .btn:disabled {
   cursor: default;
 }
+.btn-brand { background: var(--brand); border-color: var(--brand-dark); color: #fff; }
 .btn-green { background: var(--green); border-color: var(--green-dark); color: #fff; }
 .btn-blue { background: var(--blue); border-color: var(--blue-dark); color: #fff; }
 .btn-red { background: var(--red); border-color: var(--red-dark); color: #fff; }
 .btn-purple { background: var(--purple); border-color: var(--purple-dark); color: #fff; }
 .btn-yellow { background: var(--yellow); border-color: var(--yellow-dark); color: #fff; }
-.btn-white { background: var(--surface); border-color: var(--border); color: var(--blue); }
+.btn-white { background: var(--surface); border-color: var(--border); color: var(--brand); }
 .btn-ghost { background: transparent; border-color: var(--border); color: var(--text-muted); }
-.btn-disabled, .btn:disabled.btn-green, .btn:disabled.btn-blue, .btn:disabled.btn-red {
+.btn-disabled, .btn:disabled.btn-brand, .btn:disabled.btn-green, .btn:disabled.btn-blue, .btn:disabled.btn-red {
   background: var(--locked);
   border-color: var(--locked);
   color: var(--text-faint);
@@ -145,7 +157,7 @@ body {
   transition: transform 0.05s;
 }
 .tile:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
-.tile-selected { border-color: var(--blue-border); background: var(--blue-light); color: var(--blue-dark); }
+.tile-selected { border-color: var(--brand-border); background: var(--brand-light); color: var(--brand-dark); }
 .tile-correct { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
 .tile-wrong { border-color: var(--red); background: var(--red-light); color: var(--red-dark); }
 .tile-done { border-color: var(--border); background: var(--surface); color: var(--text-faint); }

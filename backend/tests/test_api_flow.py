@@ -1,4 +1,6 @@
 """End-to-end lesson loop through the HTTP API (agents disabled -> rules engine)."""
+import os
+
 from app.models import Exercise
 
 
@@ -99,3 +101,36 @@ def test_advance_day_and_leaderboard(client, auth):
     assert after["clock_offset_days"] == before["clock_offset_days"] + 1
     board = client.get("/api/v1/leaderboard", headers=auth).json()
     assert len(board["rows"]) == 16 and any(r["is_me"] for r in board["rows"])
+
+
+def test_custom_practice_tab_builds_and_keeps_practices(client, auth):
+    """Custom Practice: build on a picked topic (even one not studied yet), start it by id, and an
+    automatic tutor update must not replace it."""
+    r = client.post("/api/v1/tutor/custom", json={"concepts": ["vocab.animals"]}, headers=auth)
+    assert r.status_code == 200 and r.json()["status"] == "building"
+    data = client.get("/api/v1/tutor/custom", headers=auth).json()
+    assert any(t["key"] == "vocab.animals" for t in data["topics"])
+    practice = data["practices"][0]
+    assert practice["trigger"] == "custom" and practice["status"] == "ready"
+    assert practice["focus_concepts"] == ["vocab.animals"] and practice["exercise_count"] > 0
+
+    client.post("/api/v1/tutor/plan", json={"focus": []}, headers=auth)  # automatic-family update
+    again = client.get("/api/v1/tutor/custom", headers=auth).json()["practices"][0]
+    assert again["id"] == practice["id"] and again["status"] == "ready"
+    insights = client.get("/api/v1/tutor/insights", headers=auth).json()
+    assert insights["latest_custom"]["id"] == practice["id"]
+
+    s = client.post("/api/v1/sessions", json={"mode": "personalized", "plan_id": practice["id"]}, headers=auth)
+    assert s.status_code == 200, s.text
+    assert s.json()["mode"] == "personalized"
+
+
+def test_custom_practice_rejects_unknown_topics_and_other_learners_plans(client, auth):
+    assert client.post("/api/v1/tutor/custom", json={"concepts": ["vocab.dragons"]}, headers=auth).status_code == 422
+    other_ip = f"10.9.{os.urandom(1)[0]}.{os.urandom(1)[0]}"
+    other = client.post("/api/v1/auth/guest", json={}, headers={"x-forwarded-for": other_ip}).json()["token"]
+    other_auth = {"Authorization": f"Bearer {other}"}
+    client.post("/api/v1/tutor/custom", json={"concepts": ["verb.ser"]}, headers=other_auth)
+    theirs = client.get("/api/v1/tutor/custom", headers=other_auth).json()["practices"][0]["id"]
+    r = client.post("/api/v1/sessions", json={"mode": "personalized", "plan_id": theirs}, headers=auth)
+    assert r.status_code == 409

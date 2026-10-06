@@ -29,7 +29,7 @@ export default function Landing() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-        <span className="text-[32px] font-black tracking-tight text-duo-green">smartalingo</span>
+        <span className="text-[32px] font-black tracking-tight text-brand">smartalingo</span>
         <span className="text-sm font-extrabold uppercase text-faint">Site language: English</span>
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-10 px-6 md:flex-row md:gap-20">
@@ -45,7 +45,7 @@ export default function Landing() {
             Now with <span className="text-duo-purple">Smarto AI</span>: a personal tutor that learns from your mistakes and builds
             practice just for you.
           </p>
-          <button className="btn btn-green w-full max-w-xs" onClick={start} disabled={busy}>
+          <button className="btn btn-brand w-full max-w-xs" onClick={start} disabled={busy}>
             {busy ? "Getting ready…" : "Get started"}
           </button>
           <button className="btn btn-white w-full max-w-xs" onClick={start} disabled={busy}>

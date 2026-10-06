@@ -84,6 +84,7 @@ function triggerLabel(trigger: string, profiles: Brain["profiles"]) {
   if (trigger === "lesson_complete") return "you finished a lesson";
   if (trigger.endsWith("_complete")) return "you finished a practice";
   if (trigger === "manual") return "you asked Smarto to re-analyse";
+  if (trigger === "custom") return "you built a custom practice";
   if (trigger === "chat") return "you asked for practice in chat";
   if (trigger === "voice") return "you asked for practice by voice";
   if (trigger.startsWith("simulated:")) {

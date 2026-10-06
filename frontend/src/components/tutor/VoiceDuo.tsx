@@ -127,7 +127,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
       </div>
       <button
         onClick={live ? stop : startCall}
-        className={`grid h-20 w-20 place-items-center rounded-full ${live ? "bg-duo-red" : "bg-duo-blue"} shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1`}
+        className={`grid h-20 w-20 place-items-center rounded-full ${live ? "bg-duo-red" : "bg-brand"} shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1`}
         aria-label={live ? "End voice chat" : "Start voice chat"}
       >
         {live ? <span className="h-6 w-6 rounded-md bg-white" /> : <Mic size={36} />}
@@ -185,7 +185,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
             void startCall();
           }
         }}
-        className="fixed bottom-20 right-4 z-40 grid h-16 w-16 place-items-center rounded-full bg-duo-blue shadow-[0_6px_0_#1899D6] md:bottom-6"
+        className="fixed bottom-20 right-4 z-40 grid h-16 w-16 place-items-center rounded-full bg-brand shadow-[0_6px_0_#5B3FE0] md:bottom-6"
         aria-label={open ? "End voice chat" : "Talk to Smarto"}
       >
         {open ? <X size={30} color="#fff" strokeWidth={3} /> : <Mic size={30} />}

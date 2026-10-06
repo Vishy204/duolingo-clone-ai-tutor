@@ -14,7 +14,8 @@ from app.core.clock import utcnow
 from app.core.config import get_settings
 from app.models import AgentRun
 
-BUDGETED_KINDS = ("pipeline", "chat", "explain", "voice")
+# Voice has its own limits (per learner and per IP, see app/voice/routes.py).
+BUDGETED_KINDS = ("pipeline", "chat", "explain")
 
 
 def start_run(user_id: int, kind: str, agent_name: str, input_summary: str, plan_id: int | None = None,

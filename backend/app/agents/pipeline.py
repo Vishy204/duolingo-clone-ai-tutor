@@ -20,7 +20,7 @@ from agents import (
     output_guardrail,
     trace,
 )
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.agents import fallback, learner_data
 from app.agents.context import TutorContext
@@ -33,6 +33,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.text import strip_emoji
 from app.models import AdaptivePlan, Concept, Exercise, User
+from app.services import plans
 from app.services.grading import normalize
 
 log = logging.getLogger("tutor")
@@ -52,7 +53,7 @@ def is_running(user_id: int) -> bool:
     return bool(lock and lock.locked())
 
 
-ON_DEMAND_TRIGGERS = ("chat", "voice", "manual")
+ON_DEMAND_TRIGGERS = ("custom", "chat", "voice", "manual")
 
 
 async def run_pipeline(user_id: int, trigger: str, focus_hint: list[str] | None = None,
@@ -243,12 +244,8 @@ def _persist(session_factory, user_id: int, plan_id: int, plan: PracticePlan, co
                                     prefer_types=set(PRODUCTION) if production_focus else None,
                                     requested=requested)
 
-        db.execute(
-            update(AdaptivePlan)
-            .where(AdaptivePlan.user_id == user_id, AdaptivePlan.status == "ready", AdaptivePlan.id != plan_id)
-            .values(status="superseded")
-        )
         p = db.get(AdaptivePlan, plan_id)
+        plans.supersede_older(db, p)
         p.plan = {**plan.model_dump(), "exercise_ids": ids, "generated_count": len(converted),
                   "seeded_count": len(ids) - len(converted), "validation_errors": errors[:20]}
         p.summary = plan.learner_message
@@ -277,12 +274,8 @@ def _run_rules(user_id: int, plan_id: int, trigger: str, focus_hint: list[str], 
         user = db.get(User, user_id)
         diagnosis = fallback.diagnose(db, user)
         plan, ids, message = fallback.plan_and_pick(db, user, diagnosis, focus_hint)
-        db.execute(
-            update(AdaptivePlan)
-            .where(AdaptivePlan.user_id == user_id, AdaptivePlan.status == "ready", AdaptivePlan.id != plan_id)
-            .values(status="superseded")
-        )
         p = db.get(AdaptivePlan, plan_id)
+        plans.supersede_older(db, p)
         p.engine = "rules"
         p.diagnosis = diagnosis
         p.plan = {**plan, "exercise_ids": ids, "generated_count": 0, "seeded_count": len(ids),

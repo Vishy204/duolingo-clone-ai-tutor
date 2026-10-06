@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
         {(data?.rows || []).map((r) => (
           <div key={r.user_id}>
             <div
-              className={`flex items-center gap-4 rounded-2xl px-4 py-3 ${r.is_me ? "bg-duo-green-light" : "hover:bg-surface-2"}`}
+              className={`flex items-center gap-4 rounded-2xl px-4 py-3 ${r.is_me ? "bg-brand-light" : "hover:bg-surface-2"}`}
             >
               <span
                 className={`grid h-8 w-8 place-items-center rounded-full text-base font-extrabold ${r.rank <= 3 ? "text-white" : "text-muted"}`}
@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
               <span className="grid h-12 w-12 place-items-center rounded-full text-xl font-extrabold text-white" style={{ background: r.avatar_color }}>
                 {r.name[0]}
               </span>
-              <span className={`flex-1 text-lg ${r.is_me ? "text-duo-green-dark" : "text-ink"}`}>
+              <span className={`flex-1 text-lg ${r.is_me ? "text-brand-dark" : "text-ink"}`}>
                 {r.name} {r.is_me && "(you)"}
               </span>
               <span className="text-muted">{r.xp} XP</span>

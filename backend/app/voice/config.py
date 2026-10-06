@@ -19,7 +19,8 @@ class VoiceConfig:
     tts_voice: str
     vad_stop_secs: float
     max_session_secs: int
-    daily_sessions: int
+    daily_sessions: int  # per learner
+    ip_daily_sessions: int  # per IP, so making new guests doesn't reset it
 
 
 def load_voice_config() -> VoiceConfig | None:
@@ -42,7 +43,8 @@ def load_voice_config() -> VoiceConfig | None:
         tts_voice=os.getenv("VOICE_TTS_VOICE", "aura-2-thalia-en"),
         vad_stop_secs=float(os.getenv("VOICE_VAD_STOP_SECS", "0.3")),
         max_session_secs=int(os.getenv("VOICE_MAX_SESSION_SECS", "180")),
-        daily_sessions=int(os.getenv("VOICE_DAILY_SESSIONS", "15")),
+        daily_sessions=int(os.getenv("VOICE_DAILY_SESSIONS", "25")),
+        ip_daily_sessions=int(os.getenv("VOICE_DAILY_SESSIONS_PER_IP", "25")),
     )
 
 

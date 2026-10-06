@@ -17,6 +17,7 @@ from app.seed.content_es import ACHIEVEMENTS, BOTS, CONCEPTS, COURSE
 def seed_content(db: Session) -> Course:
     existing = db.scalar(select(Course).where(Course.slug == COURSE["slug"]))
     if existing:
+        _sync_display(db, existing)
         return existing
 
     concepts = {}
@@ -88,10 +89,20 @@ def seed_content(db: Session) -> Course:
     return course
 
 
+def _sync_display(db: Session, course: Course) -> None:
+    """Keep presentational fields (unit colours) in step with the authored content on existing DBs."""
+    units = {u.position: u for u in db.scalars(select(Unit).where(Unit.course_id == course.id))}
+    for u_pos, unit_data in enumerate(COURSE["units"], 1):
+        if u_pos in units:
+            units[u_pos].color = unit_data["color"]
+
+
 def seed_achievements(db: Session) -> None:
-    have = set(db.scalars(select(Achievement.key)))
+    have = {a.key: a for a in db.scalars(select(Achievement))}
     for key, title, desc, icon, color, metric, threshold in ACHIEVEMENTS:
-        if key not in have:
+        if key in have:  # keep names and descriptions current (e.g. after a rename)
+            have[key].title, have[key].description = title, desc
+        else:
             db.add(Achievement(key=key, title=title, description=desc, icon=icon, color=color,
                                metric=metric, threshold=threshold))
 

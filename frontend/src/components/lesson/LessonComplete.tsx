@@ -19,8 +19,8 @@ export default function LessonComplete({ summary, onDone }: { summary: CompleteR
   useEffect(() => {
     const end = Date.now() + 900;
     const frame = () => {
-      confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors: ["#58CC02", "#FFC800", "#1CB0F6", "#FF4B4B", "#CE82FF"] });
-      confetti({ particleCount: 6, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors: ["#58CC02", "#FFC800", "#1CB0F6", "#FF4B4B", "#CE82FF"] });
+      confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors: ["#7C5CFF", "#FFC800", "#1CB0F6", "#FF4B4B", "#CE82FF"] });
+      confetti({ particleCount: 6, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors: ["#7C5CFF", "#FFC800", "#1CB0F6", "#FF4B4B", "#CE82FF"] });
       if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
@@ -78,7 +78,7 @@ export default function LessonComplete({ summary, onDone }: { summary: CompleteR
       </main>
       <footer className="border-t-2 border-line">
         <div className="mx-auto flex max-w-[1040px] justify-end px-4 py-6 sm:px-10">
-          <button className="btn btn-green w-full sm:w-52" onClick={next} autoFocus>
+          <button className="btn btn-brand w-full sm:w-52" onClick={next} autoFocus>
             Continue
           </button>
         </div>

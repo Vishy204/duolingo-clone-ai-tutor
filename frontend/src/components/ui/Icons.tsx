@@ -103,6 +103,16 @@ export const NavLeague = ({ size = 32 }: P) => (
 
 export const NavQuests = ({ size = 32 }: P) => <Chest size={size} />;
 
+/** Custom Practice: a stack of exercise cards with a sparkle. */
+export const NavCustom = ({ size = 32 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
+    <rect x="7" y="4" width="20" height="22" rx="4" fill="#B9A8FF" />
+    <rect x="4" y="7" width="20" height="22" rx="4" fill="#7C5CFF" />
+    <path d="M9 14h10M9 18.5h7M9 23h9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+    <path d="M25 1.5l1.3 3.2 3.2 1.3-3.2 1.3L25 10.5l-1.3-3.2-3.2-1.3 3.2-1.3z" fill="#FFC800" />
+  </svg>
+);
+
 export const NavShop = ({ size = 32 }: P) => (
   <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
     <path d="M4 11h24l-2 17H6z" fill="#FF4B4B" />

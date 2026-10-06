@@ -31,7 +31,8 @@ XP_BY_MODE = {"lesson": 10, "practice": 10, "personalized": 15, "legendary": 40}
 # ---------------------------------------------------------------- session creation
 
 def start_session(
-    db: Session, user: User, mode: str, lesson_id: int | None = None, skill_id: int | None = None
+    db: Session, user: User, mode: str, lesson_id: int | None = None, skill_id: int | None = None,
+    plan_id: int | None = None,
 ) -> LessonSession:
     hearts.regenerate(user)
     # Abandon any dangling active session so the learner only ever has one.
@@ -41,7 +42,7 @@ def start_session(
         old.status = "abandoned"
         old.ended_at = user_now(user.clock_offset_days)
 
-    plan_id = None
+    requested_plan, plan_id = plan_id, None
     if mode == "lesson":
         if lesson_id is None:
             raise GameError("bad_request", "lesson_id is required")
@@ -64,7 +65,12 @@ def start_session(
     elif mode == "practice":
         queue = _practice_queue(db, user)
     elif mode == "personalized":
-        plan = plans.latest_ready_plan(db, user.id)
+        if requested_plan is not None:  # a specific practice; finished ones can be replayed
+            plan = db.get(AdaptivePlan, requested_plan)
+            if plan is None or plan.user_id != user.id or plan.status not in ("ready", "consumed", "superseded"):
+                raise GameError("no_plan", "That practice isn't ready yet.", 409)
+        else:
+            plan = plans.latest_ready_plan(db, user.id)
         if plan is None:
             raise GameError("no_plan", "Smarto is still preparing your personalized practice.", 409)
         if user.hearts <= 0:

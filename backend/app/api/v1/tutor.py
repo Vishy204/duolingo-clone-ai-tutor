@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.rate_limit import tutor_limiter
 from app.models import AdaptivePlan, AgentRun, Exercise, TutorMessage, User
-from app.schemas.api import ChatIn, ExplainIn, PlanIn, SimulateIn
+from app.schemas.api import ChatIn, CustomPracticeIn, ExplainIn, PlanIn, SimulateIn
 from app.services import plans, simulator
 from app.services.exercise_types import display_answer, public_payload
 
@@ -31,6 +31,7 @@ def _guard_agent_call(db: Session, user: User) -> None:
 def insights(user: User = Depends(current_user), db: Session = Depends(get_db)):
     plan = plans.latest_plan(db, user.id)
     ready = plans.latest_ready_plan(db, user.id)
+    custom = plans.latest_plan(db, user.id, custom=True)
     mastery = learner_data.concept_mastery(db, user)
     weakest = [m for m in mastery if m["attempts"] >= 2][:3]
     return {
@@ -38,6 +39,8 @@ def insights(user: User = Depends(current_user), db: Session = Depends(get_db)):
         "running": pipeline.is_running(user.id) or (plan is not None and plan.status == "pending"),
         "latest_plan": _plan_view(db, plan, with_exercises=False) if plan else None,
         "ready_plan": _plan_view(db, ready, with_exercises=False) if ready else None,
+        # Lets the app notify the learner on any page when a custom practice finishes.
+        "latest_custom": _plan_view(db, custom, with_exercises=False) if custom else None,
         "weakest": [{**m, "friendly": FRIENDLY.get(m["concept_key"], m["name"])} for m in weakest],
         "budget_left": budget_left(db, user.id),
     }
@@ -102,6 +105,38 @@ def _plan_view(db: Session, p: AdaptivePlan, with_exercises: bool) -> dict:
             for e in exs
         ]
     return view
+
+
+@router.get("/custom")
+def custom_practice(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The Custom Practice tab: every topic with the learner's mastery, and the practices they asked for."""
+    mastery = {m["concept_key"]: m for m in learner_data.concept_mastery(db, user)}
+    topics = []
+    for c in learner_data.concept_catalog(db):
+        m = mastery.get(c["key"])
+        topics.append({"key": c["key"], "name": c["name"], "kind": c["key"].split(".")[0],
+                       "mastery": m["mastery"] if m else None, "attempts": m["attempts"] if m else 0})
+    return {
+        "topics": topics,
+        "practices": [_plan_view(db, p, with_exercises=False) for p in plans.custom_plans(db, user.id)],
+        "running": pipeline.is_running(user.id),
+        "agents_enabled": get_settings().agents_enabled,
+        "budget_left": budget_left(db, user.id),
+    }
+
+
+@router.post("/custom")
+async def create_custom_practice(body: CustomPracticeIn, background: BackgroundTasks,
+                                 user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Build a practice on the topics the learner picked. Runs in the background (~30s); if the daily
+    AI limit is used up, the rules engine still builds it from course exercises."""
+    tutor_limiter.check(f"u{user.id}")
+    known = {c["key"] for c in learner_data.concept_catalog(db)}
+    concepts = list(dict.fromkeys(k for k in body.concepts if k in known))
+    if not concepts:
+        raise HTTPException(422, "Pick at least one topic.")
+    background.add_task(pipeline.run_pipeline, user.id, "custom", concepts)
+    return {"status": "building", "concepts": concepts, "eta_seconds": 30}
 
 
 @router.post("/plan")

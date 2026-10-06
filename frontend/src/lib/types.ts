@@ -245,6 +245,7 @@ export type Insights = {
   running: boolean;
   latest_plan: PlanView | null;
   ready_plan: PlanView | null;
+  latest_custom: PlanView | null;
   weakest: Mastery[];
   budget_left: number;
 };
@@ -278,3 +279,13 @@ export type Profile = {
 };
 
 export type ChatMessage = { role: "user" | "assistant"; content: string; blocked?: boolean; channel?: string };
+
+export type CustomTopic = { key: string; name: string; kind: string; mastery: number | null; attempts: number };
+
+export type CustomPracticeData = {
+  topics: CustomTopic[];
+  practices: PlanView[];
+  running: boolean;
+  agents_enabled: boolean;
+  budget_left: number;
+};
