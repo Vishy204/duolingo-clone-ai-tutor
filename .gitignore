@@ -1,0 +1,31 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+backend/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# node
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# misc
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

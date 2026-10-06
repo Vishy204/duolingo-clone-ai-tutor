@@ -1,0 +1,116 @@
+"""Voice endpoints: availability check + the WebSocket the browser's Pipecat client connects to.
+
+Security: the browser can't set headers on a WebSocket, so the learner's JWT comes as a query
+param and is verified before the pipeline starts. Origins are restricted to the frontend, each
+learner gets one live session at a time, sessions are capped in length and per day.
+"""
+import asyncio
+import re
+import time
+
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.api.deps import current_user
+from app.core.clock import utcnow
+from app.core.config import get_settings
+from app.core.db import SessionLocal, get_db
+from app.core.security import decode_access_token
+from app.models import AgentRun, User
+from app.voice.config import load_voice_config
+
+router = APIRouter(prefix="/voice")
+_live: set[int] = set()
+
+
+def _sessions_today(db: Session, user_id: int) -> int:
+    start = utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    return db.scalar(
+        select(func.count(AgentRun.id)).where(
+            AgentRun.user_id == user_id, AgentRun.kind == "voice", AgentRun.created_at >= start
+        )
+    ) or 0
+
+
+@router.get("/status")
+def status(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    cfg = load_voice_config()
+    if cfg is None:
+        return {"enabled": False}
+    return {
+        "enabled": True,
+        "llm": f"{cfg.llm_provider}/{cfg.llm_model}",
+        "stt": f"deepgram/{cfg.stt_model}",
+        "tts": f"deepgram/{cfg.tts_voice}",
+        "max_session_secs": cfg.max_session_secs,
+        "sessions_left_today": max(0, cfg.daily_sessions - _sessions_today(db, user.id)),
+    }
+
+
+@router.websocket("/ws")
+async def voice_ws(websocket: WebSocket, token: str = ""):
+    cfg = load_voice_config()
+    user_id = decode_access_token(token) if token else None
+    origin = websocket.headers.get("origin", "")
+    s = get_settings()
+    origin_ok = not origin or origin in s.cors_origin_list or (
+        s.cors_origin_regex and re.fullmatch(s.cors_origin_regex, origin)
+    )
+    if cfg is None or user_id is None or not origin_ok or user_id in _live:
+        await websocket.close(code=4401 if user_id is None else 4403)
+        return
+    with SessionLocal() as db:
+        user = db.get(User, user_id)
+        if user is None or user.is_bot or _sessions_today(db, user_id) >= cfg.daily_sessions:
+            await websocket.close(code=4429)
+            return
+        run = AgentRun(user_id=user_id, kind="voice", agent_name="Voice Duo", status="running",
+                       model=f"{cfg.llm_provider}/{cfg.llm_model}", input_summary="voice session", tool_calls=[])
+        db.add(run)
+        db.commit()
+        run_id = run.id
+
+    # Imported lazily: pipecat is heavy and only needed when someone actually talks.
+    from pipecat.serializers.protobuf import ProtobufFrameSerializer
+    from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams, FastAPIWebsocketTransport
+    from pipecat.workers.runner import WorkerRunner
+
+    from app.voice.pipeline import build_worker
+
+    await websocket.accept()
+    _live.add(user_id)
+    started = time.perf_counter()
+    try:
+        transport = FastAPIWebsocketTransport(
+            websocket,
+            FastAPIWebsocketParams(
+                audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False,
+                serializer=ProtobufFrameSerializer(), session_timeout=cfg.max_session_secs,
+            ),
+        )
+        worker = build_worker(transport, cfg, user_id)
+        runner = WorkerRunner(handle_sigint=False)
+
+        @transport.event_handler("on_client_disconnected")
+        async def on_disconnected(transport, ws):
+            await worker.cancel()
+
+        @transport.event_handler("on_session_timeout")
+        async def on_timeout(transport, ws):
+            await worker.cancel()
+
+        await runner.add_workers(worker)
+        await asyncio.wait_for(runner.run(), timeout=cfg.max_session_secs + 15)
+    except (WebSocketDisconnect, asyncio.TimeoutError):
+        pass
+    except Exception:  # noqa: BLE001
+        logger.exception("voice session crashed")
+    finally:
+        _live.discard(user_id)
+        with SessionLocal() as db:
+            run = db.get(AgentRun, run_id)
+            run.status = "ok"
+            run.latency_ms = int((time.perf_counter() - started) * 1000)
+            db.commit()
