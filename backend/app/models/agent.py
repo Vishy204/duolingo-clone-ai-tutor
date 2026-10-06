@@ -20,7 +20,7 @@ class AdaptivePlan(Base):
     diagnosis: Mapped[dict | None] = mapped_column(JSON)
     plan: Mapped[dict | None] = mapped_column(JSON)
     focus_concepts: Mapped[list] = mapped_column(JSON, default=list)
-    summary: Mapped[str | None] = mapped_column(Text)  # learner-facing message from "Duo"
+    summary: Mapped[str | None] = mapped_column(Text)  # learner-facing message from "Smarto"
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)

@@ -42,7 +42,7 @@ class PracticePlan(BaseModel):
     review_concepts: list[str] = Field(description="Concept keys due for spaced review (light touch)")
     strategy: str = Field(description="One sentence: the pedagogical strategy behind this plan")
     learner_message: str = Field(
-        description="Message from Duo the owl to the learner, max 200 chars, second person, warm and "
+        description="Message from Smarto the bird to the learner, max 200 chars, second person, warm and "
         "specific, e.g. 'You keep mixing up el/la, so I made you 4 gender drills, now with typing!'"
     )
 

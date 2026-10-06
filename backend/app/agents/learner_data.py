@@ -137,9 +137,22 @@ def concept_catalog(db: Session) -> list[dict]:
             for c in db.scalars(select(Concept).order_by(Concept.id))]
 
 
-def taught_lexicon(db: Session, user: User, concept_keys: list[str] | None = None, limit: int = 60) -> list[dict]:
+def available_lesson_ids(db: Session, user: User, requested: list[str] | None = None) -> list[int]:
+    """Lessons whose content the agents may draw on: everything studied, plus, when the learner
+    explicitly asks for a topic, the course lessons that teach it (so "practise animals" works early)."""
+    ids = set(progress.studied_lesson_ids(db, user))
+    if requested:
+        ids |= set(db.scalars(
+            select(Exercise.lesson_id).join(Exercise.concepts)
+            .where(Concept.key.in_(requested), Exercise.lesson_id.is_not(None))
+        ).all())
+    return list(ids)
+
+
+def taught_lexicon(db: Session, user: User, concept_keys: list[str] | None = None, limit: int = 60,
+                   requested: list[str] | None = None) -> list[dict]:
     """Vocabulary from lessons the learner has studied (the generator may only use these words)."""
-    lesson_ids = progress.studied_lesson_ids(db, user)
+    lesson_ids = available_lesson_ids(db, user, requested)
     q = select(Lexeme).where(Lexeme.lesson_id.in_(lesson_ids))
     words = db.scalars(q).all()
     if concept_keys:
@@ -151,8 +164,9 @@ def taught_lexicon(db: Session, user: User, concept_keys: list[str] | None = Non
     ]
 
 
-def taught_sentences(db: Session, user: User, concept_keys: list[str] | None = None, limit: int = 25) -> list[dict]:
-    lesson_ids = progress.studied_lesson_ids(db, user)
+def taught_sentences(db: Session, user: User, concept_keys: list[str] | None = None, limit: int = 25,
+                     requested: list[str] | None = None) -> list[dict]:
+    lesson_ids = available_lesson_ids(db, user, requested)
     exercises = db.scalars(
         select(Exercise).where(Exercise.lesson_id.in_(lesson_ids), Exercise.type == "translate")
     ).all()
@@ -167,14 +181,14 @@ def taught_sentences(db: Session, user: User, concept_keys: list[str] | None = N
     return out
 
 
-def taught_spanish_vocabulary(db: Session, user: User) -> set[str]:
+def taught_spanish_vocabulary(db: Session, user: User, requested: list[str] | None = None) -> set[str]:
     """Every Spanish token the learner has seen, for the generator's grounding check."""
     from app.services.grading import strip_accents, tokens
 
     vocab: set[str] = set()
-    for w in taught_lexicon(db, user, limit=10_000):
+    for w in taught_lexicon(db, user, limit=10_000, requested=requested):
         vocab.update(strip_accents(t) for t in tokens(w["spanish"]))
-    for s in taught_sentences(db, user, limit=10_000):
+    for s in taught_sentences(db, user, limit=10_000, requested=requested):
         vocab.update(strip_accents(t) for t in tokens(s["spanish"]))
     return vocab
 

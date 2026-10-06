@@ -58,8 +58,10 @@ def get_course_lexicon(ctx: RunContextWrapper[TutorContext], concept_keys: list[
         user = db.get(User, ctx.context.user_id)
         return json.dumps(
             {
-                "words": learner_data.taught_lexicon(db, user, concept_keys, limit=40),
-                "sentences": learner_data.taught_sentences(db, user, concept_keys, limit=15),
+                "words": learner_data.taught_lexicon(db, user, concept_keys, limit=40,
+                                                     requested=ctx.context.focus_hint),
+                "sentences": learner_data.taught_sentences(db, user, concept_keys, limit=15,
+                                                         requested=ctx.context.focus_hint),
             },
             ensure_ascii=False,
         )

@@ -9,8 +9,8 @@ import TutorBrain from "@/components/tutor/TutorBrain";
 import VoiceDuo from "@/components/tutor/VoiceDuo";
 
 const TABS = [
-  { key: "talk", label: "Talk to Duo", Icon: MessageCircle },
-  { key: "learn", label: "How Duo learns", Icon: Brain },
+  { key: "talk", label: "Talk to Smarto", Icon: MessageCircle },
+  { key: "learn", label: "How Smarto learns", Icon: Brain },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 

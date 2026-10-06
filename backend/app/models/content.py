@@ -100,7 +100,7 @@ class Concept(Base):
 
 
 class Lexeme(Base):
-    """Vocabulary taught by the course. Grounds the exercise-generator agent and voice Duo."""
+    """Vocabulary taught by the course. Grounds the exercise-generator agent and voice Smarto."""
 
     __tablename__ = "lexemes"
 

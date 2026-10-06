@@ -29,7 +29,7 @@ def plan_exercises(db: Session, plan: AdaptivePlan) -> list[Exercise]:
 
 
 def unseen_plan_exercises(db: Session, plan: AdaptivePlan, user_id: int, limit: int) -> list[Exercise]:
-    """Plan items the learner hasn't attempted yet (used to sprinkle Duo's picks into lessons)."""
+    """Plan items the learner hasn't attempted yet (used to sprinkle Smarto's picks into lessons)."""
     exercises = [e for e in plan_exercises(db, plan) if e.source == "agent"]
     if not exercises:
         return []

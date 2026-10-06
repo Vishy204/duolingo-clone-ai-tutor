@@ -4,12 +4,13 @@ Code-orchestrated (not LLM-routed) on purpose: each step has a typed contract, s
 deterministic, debuggable and cheap, while each agent still reasons and calls tools on its own.
 
 Triggered in the background after every lesson (never on the request path), on demand from the
-Tutor Brain page, or by Duo's `create_practice` tool. One run per learner at a time; a per-learner
+Tutor Brain page, or by Smarto's `create_practice` tool. One run per learner at a time; a per-learner
 daily budget caps cost; any failure degrades to the rule-based tutor.
 """
 import asyncio
 import json
 import logging
+import re
 import time
 
 from agents import (
@@ -25,7 +26,7 @@ from app.agents import fallback, learner_data
 from app.agents.context import TutorContext
 from app.agents.definitions import analyst_agent, generator_agent, planner_agent
 from app.agents.observability import budget_left, finish_run, run_step, start_run
-from app.agents.schemas import GeneratedSet, LearnerDiagnosis, PracticePlan
+from app.agents.schemas import GeneratedSet, LearnerDiagnosis, PlanItem, PracticePlan
 from app.agents.validation import Converted, validate_all
 from app.core.clock import utcnow
 from app.core.config import get_settings
@@ -51,10 +52,15 @@ def is_running(user_id: int) -> bool:
     return bool(lock and lock.locked())
 
 
+ON_DEMAND_TRIGGERS = ("chat", "voice", "manual")
+
+
 async def run_pipeline(user_id: int, trigger: str, focus_hint: list[str] | None = None,
                        session_factory=SessionLocal, force_rules: bool = False) -> int | None:
     lock = _lock(user_id)
-    if lock.locked():
+    # Automatic triggers are idempotent: if a run is in flight, it already covers them. An explicit
+    # request ("make me a practice on verbs") must never be dropped, so it waits its turn instead.
+    if lock.locked() and trigger not in ON_DEMAND_TRIGGERS:
         log.info("pipeline already running for user %s; skipping (%s)", user_id, trigger)
         return None
     async with lock:
@@ -94,7 +100,9 @@ async def _run_agents(user_id: int, plan_id: int, trigger: str, focus_hint: list
         user = db.get(User, user_id)
         catalog = learner_data.concept_catalog(db)
         known = {c["key"] for c in catalog}
-        vocab = learner_data.taught_spanish_vocabulary(db, user)
+        requested = [k for k in focus_hint if k in known]
+        ctx.focus_hint = requested
+        vocab = learner_data.taught_spanish_vocabulary(db, user, requested)
         emoji = {normalize(w["spanish"]): w["emoji"] for w in learner_data.taught_lexicon(db, user, limit=500)}
         due = [m["concept_key"] for m in learner_data.concept_mastery(db, user) if m["due_for_review"]][:3]
 
@@ -121,7 +129,10 @@ async def _run_agents(user_id: int, plan_id: int, trigger: str, focus_hint: list
                 "concept_catalog": [{"key": c["key"], "name": c["name"]} for c in catalog],
             }, ensure_ascii=False)
             res, _ = await run_step(planner_agent(), planner_input, ctx, plan_id=plan_id, parent_id=root)
-            plan: PracticePlan = _sanitize_plan(res.final_output, known, diagnosis)
+            plan: PracticePlan = _sanitize_plan(res.final_output, known, diagnosis, requested)
+            if requested:  # say exactly what they asked for, not the planner's general diagnosis
+                names = {c["key"]: c["name"] for c in catalog}
+                plan.learner_message = f"Here's the practice you asked for: {', '.join(names[k] for k in requested)}."
             _update_plan(session_factory, plan_id, plan=plan.model_dump(),
                          focus_concepts=[i.concept_key for i in plan.items])
 
@@ -129,7 +140,8 @@ async def _run_agents(user_id: int, plan_id: int, trigger: str, focus_hint: list
             converted, errors = await _generate(ctx, plan, known, vocab, emoji, plan_id, root)
 
             # 4) Persist ----------------------------------------------------------------
-            exercise_ids = _persist(session_factory, user_id, plan_id, plan, converted, errors, diagnosis)
+            exercise_ids = _persist(session_factory, user_id, plan_id, plan, converted, errors, diagnosis,
+                                    requested)
             finish_run(root, status="ok", latency_ms=int((time.perf_counter() - t0) * 1000), output={
                 "weak_concepts": [w.concept_key for w in diagnosis.weak_concepts],
                 "planned": sum(i.exercise_count for i in plan.items),
@@ -145,10 +157,21 @@ async def _run_agents(user_id: int, plan_id: int, trigger: str, focus_hint: list
 PRODUCTION = ["translate", "type_answer"]
 
 
-def _sanitize_plan(plan: PracticePlan, known: set[str], diagnosis: LearnerDiagnosis) -> PracticePlan:
-    """Deterministic guard-rails on the planner's output (bounds + one pedagogy invariant)."""
+def _sanitize_plan(plan: PracticePlan, known: set[str], diagnosis: LearnerDiagnosis,
+                   requested: list[str] | None = None) -> PracticePlan:
+    """Deterministic guard-rails on the planner's output (bounds + pedagogy invariants)."""
     modes = {w.concept_key: w.weakness_mode for w in diagnosis.weak_concepts}
     items = [i for i in plan.items if i.concept_key in known][:4]
+    if requested:  # the learner asked for these topics: the session is about them, nothing else
+        items = [i for i in items if i.concept_key in requested]
+        for key in requested:
+            if all(i.concept_key != key for i in items):
+                items.append(PlanItem(
+                    concept_key=key, exercise_count=max(2, 8 // len(requested)), difficulty=1,
+                    exercise_types=["multiple_choice", "match_pairs", "translate", "type_answer"],
+                    reason="You asked to practise this.",
+                ))
+        plan.review_concepts = []
     for i in items:
         i.exercise_count = max(1, min(4, i.exercise_count))
         i.difficulty = max(1, min(3, i.difficulty))
@@ -165,7 +188,7 @@ def _sanitize_plan(plan: PracticePlan, known: set[str], diagnosis: LearnerDiagno
         total -= 1
     plan.items = items
     plan.review_concepts = [c for c in plan.review_concepts if c in known][:3]
-    plan.learner_message = strip_emoji(plan.learner_message)[:220]
+    plan.learner_message = re.sub(r"^\s*Smarto\s*:\s*", "", strip_emoji(plan.learner_message))[:220]
     return plan
 
 
@@ -199,7 +222,7 @@ async def _generate(ctx: TutorContext, plan: PracticePlan, known, vocab, emoji, 
 
 
 def _persist(session_factory, user_id: int, plan_id: int, plan: PracticePlan, converted: list[Converted],
-             errors: list[str], diagnosis: LearnerDiagnosis) -> list[int]:
+             errors: list[str], diagnosis: LearnerDiagnosis, requested: list[str] | None = None) -> list[int]:
     with session_factory() as db:
         user = db.get(User, user_id)
         concepts = {c.key: c for c in db.scalars(select(Concept))}
@@ -217,7 +240,8 @@ def _persist(session_factory, user_id: int, plan_id: int, plan: PracticePlan, co
         focus = [i.concept_key for i in plan.items] + plan.review_concepts
         production_focus = any(w.weakness_mode == "production" for w in diagnosis.weak_concepts[:2])
         ids += fallback.seeded_fill(db, user, focus, set(ids), target - len(ids),
-                                    prefer_types=set(PRODUCTION) if production_focus else None)
+                                    prefer_types=set(PRODUCTION) if production_focus else None,
+                                    requested=requested)
 
         db.execute(
             update(AdaptivePlan)
@@ -277,7 +301,7 @@ _background: set[asyncio.Task] = set()
 
 
 def schedule(user_id: int, trigger: str, focus_hint: list[str] | None = None) -> None:
-    """Fire-and-forget from inside a running event loop (Duo's tool, the voice agent)."""
+    """Fire-and-forget from inside a running event loop (Smarto's tool, the voice agent)."""
     task = asyncio.get_running_loop().create_task(run_pipeline(user_id, trigger, focus_hint))
     _background.add(task)  # keep a reference so the task isn't garbage-collected mid-run
     task.add_done_callback(_background.discard)

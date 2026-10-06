@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Mascot from "../Mascot";
 import { NavLeague, NavLearn, NavMore, NavProfile, NavQuests, NavShop } from "../ui/Icons";
 
-const OwlIcon = ({ size = 32 }: { size?: number }) => (
+const MascotIcon = ({ size = 32 }: { size?: number }) => (
   <div style={{ width: size, height: size }} className="grid place-items-center">
     <Mascot size={size + 4} animate={false} />
   </div>
@@ -13,7 +13,7 @@ const OwlIcon = ({ size = 32 }: { size?: number }) => (
 
 export const NAV = [
   { href: "/learn", label: "Learn", Icon: NavLearn },
-  { href: "/tutor", label: "Duo AI", Icon: OwlIcon, badge: "NEW" },
+  { href: "/tutor", label: "Smarto", Icon: MascotIcon, badge: "NEW" },
   { href: "/leaderboard", label: "Leaderboards", Icon: NavLeague },
   { href: "/quests", label: "Quests", Icon: NavQuests },
   { href: "/shop", label: "Shop", Icon: NavShop },

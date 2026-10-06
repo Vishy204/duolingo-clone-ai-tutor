@@ -1,4 +1,4 @@
-"""The real-time voice loop for Duo.
+"""The real-time voice loop for Smarto.
 
     browser mic ─ws─► Silero VAD (local) ─► Deepgram nova-3 (multi: EN+ES) ─► Cerebras gpt-oss-120b
                                                                               │ (+ fast tools)
@@ -38,7 +38,7 @@ from app.models import TutorMessage, User
 from app.voice.config import VoiceConfig
 
 SYSTEM_PROMPT = """\
-You are Duo, a cheerful owl who tutors Spanish by VOICE inside the Smartalingo app. The learner
+You are Smarto, a cheerful bird who tutors Spanish by VOICE inside the Smartalingo app. The learner
 speaks English and is learning Spanish; they may say Spanish phrases and ask if they're right.
 
 How you talk (this is read aloud):
@@ -109,7 +109,7 @@ def build_worker(transport: BaseTransport, cfg: VoiceConfig, user_id: int) -> Pi
 
     async def create_practice(params: FunctionCallParams, concept_keys: list[str]):
         """Build a personalized practice session on these concepts in the background. It appears on the
-        learner's path as Duo's Practice in about 30 seconds.
+        learner's path as Smarto's Practice in about 30 seconds.
 
         Args:
             concept_keys: e.g. ["grammar.gender_articles"], ["verb.ser"], ["spelling.accents"],

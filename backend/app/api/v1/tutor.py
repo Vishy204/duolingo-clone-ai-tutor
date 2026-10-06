@@ -24,7 +24,7 @@ def _guard_agent_call(db: Session, user: User) -> None:
     if not get_settings().agents_enabled:
         raise HTTPException(503, "The AI tutor isn't configured on this server.")
     if budget_left(db, user.id) <= 0:
-        raise HTTPException(429, "Duo needs a rest! You've used today's tutor budget. Back tomorrow.")
+        raise HTTPException(429, "Smarto needs a rest! You've used today's tutor budget. Back tomorrow.")
 
 
 @router.get("/insights")

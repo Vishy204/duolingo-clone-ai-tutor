@@ -1,6 +1,6 @@
-"""Duo: the conversational tutor (text chat) and the "Explain my mistake" agent.
+"""Smarto: the conversational tutor (text chat) and the "Explain my mistake" agent.
 
-Duo orchestrates other agents as tools (the Analyst via `.as_tool()`), can take actions
+Smarto orchestrates other agents as tools (the Analyst via `.as_tool()`), can take actions
 (create_practice schedules the adaptive pipeline), and sits behind an input guardrail that
 blocks off-topic requests and prompt injection before the main model ever runs.
 """
@@ -82,16 +82,28 @@ def get_learning_snapshot(ctx: RunContextWrapper[TutorContext]) -> str:
 
 
 @function_tool
-def create_practice(ctx: RunContextWrapper[TutorContext], concept_keys: list[str]) -> str:
+async def create_practice(ctx: RunContextWrapper[TutorContext], concept_keys: list[str]) -> str:
     """Build a new personalized practice session focused on these concepts. It is generated in the
-    background by the tutor pipeline and appears on the learner's path as "Duo's Practice".
+    background by the tutor pipeline and appears on the learner's path as "Smarto's Practice".
+
+    Call it whenever the learner asks for practice on anything, as often as they ask. Use [] for
+    "my weakest topics".
 
     Args:
-        concept_keys: concept keys to focus on, e.g. ["verb.ser"]
+        concept_keys: 1-4 of: vocab.basics, vocab.food, vocab.people, vocab.animals, vocab.family,
+            vocab.places, grammar.gender_articles, grammar.plurals, grammar.subject_pronouns,
+            grammar.adjective_agreement, grammar.word_order, verb.ser, verb.comer_beber, verb.tener,
+            spelling.accents
     """
-    ctx.context.requested_practice = concept_keys
-    pipeline.schedule(ctx.context.user_id, "chat", concept_keys)
-    return json.dumps({"status": "building", "focus": concept_keys, "eta_seconds": 30})
+    with ctx.context.session_factory() as db:
+        catalog = {c.key: c.name for c in db.scalars(select(Concept)).all()}
+    keys = [k for k in concept_keys if k in catalog][:4]
+    if concept_keys and not keys:  # let the model retry with real keys instead of building a generic set
+        return json.dumps({"status": "unknown_concepts", "valid_concepts": catalog}, ensure_ascii=False)
+    ctx.context.requested_practice = keys
+    pipeline.schedule(ctx.context.user_id, "chat", keys)
+    return json.dumps({"status": "building", "focus": [catalog[k] for k in keys] or "your weakest topics",
+                       "eta_seconds": 30}, ensure_ascii=False)
 
 
 def duo_agent() -> Agent[TutorContext]:
@@ -102,7 +114,7 @@ def duo_agent() -> Agent[TutorContext]:
         max_turns=6,
     )
     return Agent[TutorContext](
-        name="Duo",
+        name="Smarto",
         instructions=DUO_INSTRUCTIONS,
         tools=[get_learning_snapshot, analyst_tool, explain_concept, create_practice],
         input_guardrails=[topic_guard],
@@ -126,7 +138,7 @@ async def chat(db, user: User, message: str) -> dict:
 
     ctx = TutorContext(user_id=user.id)
     blocked = False
-    with trace("Duo chat", group_id=f"learner-{user.id}"):
+    with trace("Smarto chat", group_id=f"learner-{user.id}"):
         try:
             result, _ = await run_step(duo_agent(), items, ctx, kind="chat", max_turns=6)
             reply = strip_emoji(str(result.final_output))
@@ -134,7 +146,7 @@ async def chat(db, user: User, message: str) -> dict:
             reply, blocked = BLOCKED_REPLY, True
 
     db.add(TutorMessage(user_id=user.id, role="assistant", content=reply, blocked=blocked))
-    if blocked:  # don't keep the off-topic turn in Duo's memory either
+    if blocked:  # don't keep the off-topic turn in Smarto's memory either
         last_user = db.scalar(
             select(TutorMessage).where(TutorMessage.user_id == user.id, TutorMessage.role == "user")
             .order_by(TutorMessage.id.desc()).limit(1)
@@ -142,7 +154,7 @@ async def chat(db, user: User, message: str) -> dict:
         if last_user:
             last_user.blocked = True
     db.commit()
-    return {"reply": reply, "blocked": blocked, "practice_requested": ctx.requested_practice}
+    return {"reply": reply, "blocked": blocked, "practice_requested": ctx.requested_practice is not None}
 
 
 async def explain_attempt(db, user: User, attempt_id: int) -> dict:

@@ -16,4 +16,4 @@ class TutorContext:
     user_id: int
     session_factory: Callable[[], Session] = SessionLocal
     focus_hint: list[str] = field(default_factory=list)  # concepts the learner explicitly asked for
-    requested_practice: list[str] = field(default_factory=list)  # set by Duo's create_practice tool
+    requested_practice: list[str] | None = None  # set by Smarto's create_practice tool ([] = weakest topics)

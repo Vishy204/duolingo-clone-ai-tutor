@@ -20,7 +20,7 @@ export default function ComingSoon() {
       <div className="flex flex-col items-center gap-4 py-16 text-center">
         <Mascot mood="think" size={160} />
         <h1 className="text-2xl font-extrabold text-ink">Coming soon!</h1>
-        <p className="max-w-sm text-muted">{COPY[feature] || "This feature"} isn&apos;t part of this clone yet. Duo is working on it.</p>
+        <p className="max-w-sm text-muted">{COPY[feature] || "This feature"} isn&apos;t part of this clone yet. Smarto is working on it.</p>
         <Link href="/learn" className="btn btn-green mt-2 w-56">Back to learning</Link>
       </div>
     </AppShell>

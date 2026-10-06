@@ -19,7 +19,7 @@ function friendlyError(raw: string): string {
 }
 
 /**
- * Voice Duo: speak a phrase ("¿hola amigo está bien?") and hear Duo's answer.
+ * Voice Smarto: speak a phrase ("¿hola amigo está bien?") and hear Smarto's answer.
  * Browser mic <-> Pipecat over a WebSocket (speech-to-text -> LLM -> text-to-speech on the server).
  */
 export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab" }) {
@@ -29,7 +29,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
   const [err, setErr] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const client = useRef<{ disconnect: () => Promise<void> } | null>(null);
-  // The server can emit the same sentence more than once; keep one copy per Duo turn.
+  // The server can emit the same sentence more than once; keep one copy per Smarto turn.
   const turn = useRef<string[]>([]);
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -115,7 +115,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
     connecting: "Connecting…",
     listening: "Listening",
     you: "Hearing you…",
-    duo: "Duo is speaking",
+    duo: "Smarto is speaking",
     error: "Couldn't connect",
   }[state];
 
@@ -186,7 +186,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
           }
         }}
         className="fixed bottom-20 right-4 z-40 grid h-16 w-16 place-items-center rounded-full bg-duo-blue shadow-[0_6px_0_#1899D6] md:bottom-6"
-        aria-label={open ? "End voice chat" : "Talk to Duo"}
+        aria-label={open ? "End voice chat" : "Talk to Smarto"}
       >
         {open ? <X size={30} color="#fff" strokeWidth={3} /> : <Mic size={30} />}
       </button>

@@ -199,7 +199,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
 
   const legendary = session?.mode === "legendary";
   const modeLabel =
-    session?.mode === "personalized" ? "Duo's personalized practice" : session?.mode === "practice" ? "Practice" : legendary ? "Legendary" : null;
+    session?.mode === "personalized" ? "Smarto's personalized practice" : session?.mode === "practice" ? "Practice" : legendary ? "Legendary" : null;
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -264,7 +264,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
             <motion.div key={`${current.id}-${index}`} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
               {(current.personalized || modeLabel) && (
                 <div className="mb-3 flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-duo-purple">
-                  <Sparkle size={16} /> {current.personalized ? "Duo's pick for you" : modeLabel}
+                  <Sparkle size={16} /> {current.personalized ? "Smarto's pick for you" : modeLabel}
                 </div>
               )}
               <ExerciseView

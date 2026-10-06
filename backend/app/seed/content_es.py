@@ -363,7 +363,7 @@ ACHIEVEMENTS = [
     ("sharpshooter", "Sharpshooter", "Complete a lesson with no mistakes", "🎯", "#CE82FF", "perfect", 1),
     ("perfectionist", "Perfectionist", "Complete 5 lessons with no mistakes", "💎", "#CE82FF", "perfect", 5),
     ("conqueror", "Conqueror", "Complete 3 levels", "👑", "#FFC800", "skills", 3),
-    ("duo_student", "Duo's Student", "Finish a personalized practice built by Duo", "🦉", "#58CC02", "personalized", 1),
+    ("duo_student", "Smarto's Student", "Finish a personalized practice built by Smarto", "🦉", "#58CC02", "personalized", 1),
     ("legendary", "Legendary", "Pass a Legendary challenge", "🏅", "#FFC800", "legendary", 1),
 ]
 

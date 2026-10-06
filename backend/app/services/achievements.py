@@ -82,6 +82,6 @@ def daily_quests(db: Session, user: User) -> list[dict]:
         {"key": "lessons", "title": "Complete 2 lessons", "progress": min(lessons_today, 2), "target": 2},
         {"key": "accuracy", "title": "Score 90% or higher in 2 lessons",
          "progress": min(great_today, 2), "target": 2},
-        {"key": "duo", "title": "Finish a personalized practice from Duo",
+        {"key": "duo", "title": "Finish a personalized practice from Smarto",
          "progress": min(personalized_today, 1), "target": 1},
     ]

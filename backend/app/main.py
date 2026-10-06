@@ -57,7 +57,7 @@ api.include_router(sessions.router, tags=["lessons"])
 api.include_router(tutor.router, tags=["tutor"])
 app.include_router(api)
 
-try:  # Voice Duo is optional: only mounted when its dependencies and keys are present.
+try:  # Voice Smarto is optional: only mounted when its dependencies and keys are present.
     from app.voice.routes import router as voice_router
 
     app.include_router(voice_router, prefix="/api/v1", tags=["voice"])

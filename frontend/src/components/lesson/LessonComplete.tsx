@@ -56,7 +56,7 @@ export default function LessonComplete({ summary, onDone }: { summary: CompleteR
             {summary.tutor_updating && (
               <div className="flex items-center gap-2 rounded-2xl border-2 border-duo-purple px-4 py-3 text-left text-[15px] text-ink">
                 <Sparkles size={22} className="shrink-0 text-duo-purple" />
-                Duo is reviewing your answers to personalize your next practice…
+                Smarto is reviewing your answers to personalize your next practice…
               </div>
             )}
           </>

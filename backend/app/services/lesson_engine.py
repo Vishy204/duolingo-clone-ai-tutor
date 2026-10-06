@@ -2,7 +2,7 @@
 
 Modes
 - lesson:        a path lesson. Mistakes cost a heart and the exercise comes back at the end.
-                 Up to 2 of Duo's personalized exercises (from the latest ready plan) are mixed in.
+                 Up to 2 of Smarto's personalized exercises (from the latest ready plan) are mixed in.
 - practice:      "practice to earn hearts": targets the weakest / due-for-review concepts using
                  already-taught content. No hearts lost; finishing gives +1 heart.
 - personalized:  the session built by the tutor agents (AdaptivePlan). Hearts are used.
@@ -57,7 +57,7 @@ def start_session(
         exercises = list(lesson.exercises)
         extra = _duo_picks(db, user, limit=2)
         queue = [e.id for e in exercises]
-        for i, e in enumerate(extra):  # sprinkle Duo's picks into the middle of the lesson
+        for i, e in enumerate(extra):  # sprinkle Smarto's picks into the middle of the lesson
             queue.insert(min(len(queue), 3 + i * 3), e.id)
         skill_id = lesson.skill_id
         plan_id = extra[0].plan_id if extra else None
@@ -66,7 +66,7 @@ def start_session(
     elif mode == "personalized":
         plan = plans.latest_ready_plan(db, user.id)
         if plan is None:
-            raise GameError("no_plan", "Duo is still preparing your personalized practice.", 409)
+            raise GameError("no_plan", "Smarto is still preparing your personalized practice.", 409)
         if user.hearts <= 0:
             raise GameError("no_hearts", "You ran out of hearts!", 409)
         queue = [e.id for e in plans.plan_exercises(db, plan)]
@@ -138,7 +138,7 @@ def _practice_queue(db: Session, user: User, size: int = 10) -> list[int]:
         chosen += rest[: size - len(chosen)]
 
     plan = plans.latest_ready_plan(db, user.id)
-    if plan is not None:  # top up with Duo's generated items
+    if plan is not None:  # top up with Smarto's generated items
         chosen = plans.unseen_plan_exercises(db, plan, user.id, 3) + chosen[: size - 3]
     rng.shuffle(chosen)
     return [e.id for e in chosen]

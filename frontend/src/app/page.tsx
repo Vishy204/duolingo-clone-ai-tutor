@@ -42,7 +42,7 @@ export default function Landing() {
             The free, fun, and effective way to learn a language!
           </h1>
           <p className="text-muted">
-            Now with <span className="text-duo-purple">Duo AI</span>: a personal tutor that learns from your mistakes and builds
+            Now with <span className="text-duo-purple">Smarto AI</span>: a personal tutor that learns from your mistakes and builds
             practice just for you.
           </p>
           <button className="btn btn-green w-full max-w-xs" onClick={start} disabled={busy}>

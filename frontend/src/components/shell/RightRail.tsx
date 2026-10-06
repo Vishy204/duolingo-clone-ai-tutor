@@ -33,7 +33,7 @@ export function DuoInsightsCard() {
   return (
     <div className="card relative overflow-hidden border-duo-purple p-5">
       <div className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-duo-purple">
-        <Sparkle /> Duo&apos;s insights
+        <Sparkle /> Smarto&apos;s insights
         {data.running && <span className="ml-auto animate-pulse text-xs normal-case text-muted">thinking…</span>}
       </div>
       <div className="flex gap-3">

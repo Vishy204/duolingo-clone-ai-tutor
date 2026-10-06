@@ -103,7 +103,7 @@ function UnitSection({
                   <DuoPracticeNode plan={duoPractice} />
                 </div>
               )}
-              {/* Duo cheers next to the path, like in the app */}
+              {/* Smarto cheers next to the path, like in the app */}
               {i === 2 && (
                 <div className="pointer-events-none absolute top-0 hidden sm:block" style={{ left: OFFSETS[i] > 0 ? "12%" : "auto", right: OFFSETS[i] > 0 ? "auto" : "12%" }}>
                   <Mascot size={110} mood={locked ? "sad" : "happy"} />
@@ -251,7 +251,7 @@ function DuoPracticeNode({ plan }: { plan: PlanCard }) {
     <Link
       href={ready ? "/practice?mode=personalized" : "/tutor?tab=learn"}
       className="group relative flex flex-col items-center"
-      aria-label="Duo's personalized practice"
+      aria-label="Smarto's personalized practice"
     >
       <div
         className={`relative grid h-[78px] w-[78px] place-items-center rounded-full ${ready ? "animate-pulse-ring" : ""}`}
@@ -261,7 +261,7 @@ function DuoPracticeNode({ plan }: { plan: PlanCard }) {
         <span className="absolute -right-1 -top-1"><Sparkle size={22} color="#FFC800" /></span>
       </div>
       <div className="mt-4 max-w-[220px] rounded-xl border-2 border-duo-purple bg-surface px-3 py-1.5 text-center text-xs font-extrabold uppercase tracking-wide text-duo-purple">
-        {ready ? `Duo's practice · ${plan.exercise_count} for you` : "Duo is building your practice…"}
+        {ready ? `Smarto's practice · ${plan.exercise_count} for you` : "Smarto is building your practice…"}
       </div>
     </Link>
   );

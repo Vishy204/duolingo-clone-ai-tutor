@@ -11,8 +11,8 @@ import Mascot from "../Mascot";
 import { useToast } from "../ui/Toast";
 
 /**
- * "How Duo learns": the latest adaptation told as a story.
- * Your mistakes -> what Duo concluded -> what it changed -> the exercises it wrote.
+ * "How Smarto learns": the latest adaptation told as a story.
+ * Your mistakes -> what Smarto concluded -> what it changed -> the exercises it wrote.
  * Agent traces are not shown here; they are stored in agent_runs and visible via /api/v1/tutor/brain.
  */
 
@@ -83,7 +83,7 @@ function triggerLabel(trigger: string, profiles: Brain["profiles"]) {
   if (trigger === "onboarding") return "you joined";
   if (trigger === "lesson_complete") return "you finished a lesson";
   if (trigger.endsWith("_complete")) return "you finished a practice";
-  if (trigger === "manual") return "you asked Duo to re-analyse";
+  if (trigger === "manual") return "you asked Smarto to re-analyse";
   if (trigger === "chat") return "you asked for practice in chat";
   if (trigger === "voice") return "you asked for practice by voice";
   if (trigger.startsWith("simulated:")) {
@@ -117,7 +117,7 @@ export default function TutorBrain() {
         ) : (
           <div className="card flex flex-col items-center gap-3 p-8 text-center text-muted">
             <Mascot size={80} mood="think" />
-            Duo hasn&apos;t analysed you yet. Finish a lesson, or add test mistakes above.
+            Smarto hasn&apos;t analysed you yet. Finish a lesson, or add test mistakes above.
           </div>
         )}
       </div>
@@ -143,16 +143,16 @@ export default function TutorBrain() {
 function HowItWorks() {
   const steps = [
     { Icon: PenLine, title: "You answer", body: "Every answer is graded and the mistake gets a type: wrong article, missing accent, word order…" },
-    { Icon: Search, title: "Duo finds the cause", body: "After each lesson Duo reads those mistakes and works out what you misunderstand." },
-    { Icon: MapIcon, title: "Duo plans", body: "Duo picks the topics to fix and the exercise types that train them." },
-    { Icon: Target, title: "Duo writes practice", body: "Duo writes new exercises using only words you've learned, and checks each one before you see it." },
+    { Icon: Search, title: "Smarto finds the cause", body: "After each lesson Smarto reads those mistakes and works out what you misunderstand." },
+    { Icon: MapIcon, title: "Smarto plans", body: "Smarto picks the topics to fix and the exercise types that train them." },
+    { Icon: Target, title: "Smarto writes practice", body: "Smarto writes new exercises using only words you've learned, and checks each one before you see it." },
   ];
   return (
     <section className="card p-5">
       <div className="flex items-center gap-3">
         <Mascot size={56} animate={false} />
         <div>
-          <h2 className="text-xl font-extrabold text-ink">How Duo learns from your mistakes</h2>
+          <h2 className="text-xl font-extrabold text-ink">How Smarto learns from your mistakes</h2>
           <p className="text-sm text-muted">This repeats after every lesson. Below is exactly what happened the last time.</p>
         </div>
       </div>
@@ -209,15 +209,15 @@ function TryIt({ data, onInjected }: { data: Brain; onInjected: () => void }) {
     <section className="rounded-2xl border-2 border-dashed border-duo-purple p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl">
-          <h3 className="flex items-center gap-2 text-lg font-extrabold text-ink"><FlaskConical size={20} className="text-duo-purple" /> Try it: give Duo new mistakes</h3>
+          <h3 className="flex items-center gap-2 text-lg font-extrabold text-ink"><FlaskConical size={20} className="text-duo-purple" /> Try it: give Smarto new mistakes</h3>
           <p className="mt-1 text-sm text-muted">
-            Pick a kind of learner. We add ~14 realistic wrong answers (graded like real ones) and Duo re-analyses.
+            Pick a kind of learner. We add ~14 realistic wrong answers (graded like real ones) and Smarto re-analyses.
             Then check whether the diagnosis and new practice below match what you picked. You can also{" "}
             <Link href="/learn" className="font-bold text-duo-blue">do a real lesson</Link> and make mistakes on purpose.
           </p>
         </div>
         <button className="btn btn-white h-10 px-4 text-[13px]" onClick={rerun} disabled={rerunning || data.running}>
-          {data.running ? "Duo is thinking…" : "Re-analyse now"}
+          {data.running ? "Smarto is thinking…" : "Re-analyse now"}
         </button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -246,7 +246,7 @@ function TryIt({ data, onInjected }: { data: Brain; onInjected: () => void }) {
               ))}
             </span>
           )}
-          <div className="mt-1 text-muted">{data.running ? "Duo is re-analysing. Steps below fill in live (about 30s)." : "Done. See the update below."}</div>
+          <div className="mt-1 text-muted">{data.running ? "Smarto is re-analysing. Steps below fill in live (about 30s)." : "Done. See the update below."}</div>
         </div>
       )}
     </section>
@@ -283,19 +283,19 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
             {latest ? "Latest update" : "Update"} · {when(plan.created_at)}
           </div>
           <div className="text-[17px] font-extrabold text-ink">
-            {pending ? "Duo is analysing your answers…" : `Duo updated your practice because ${triggerLabel(plan.trigger, data.profiles)}`}
+            {pending ? "Smarto is analysing your answers…" : `Smarto updated your practice because ${triggerLabel(plan.trigger, data.profiles)}`}
           </div>
         </div>
       </header>
 
       <div className="px-5 py-5">
-        <Step n={1} title="What Duo saw" subtitle="Your recent wrong answers, sorted by type of mistake" state="done">
+        <Step n={1} title="What Smarto saw" subtitle="Your recent wrong answers, sorted by type of mistake" state="done">
           <Evidence data={data} patterns={d?.error_patterns || []} latest={latest} />
         </Step>
 
         <Step
           n={2}
-          title="What Duo concluded"
+          title="What Smarto concluded"
           subtitle="The topics behind those mistakes, and the likely reason"
           state={s2}
           working="Reading your answers…"
@@ -305,7 +305,7 @@ function Story({ plan, data, names, latest }: { plan: PlanView; data: Brain; nam
 
         <Step
           n={3}
-          title="What Duo changed"
+          title="What Smarto changed"
           subtitle="Which topics you'll practise, and how"
           state={s3}
           working="Choosing topics and exercise types…"
@@ -528,7 +528,7 @@ function Exercises({ plan, names }: { plan: PlanView; names: Names }) {
       )}
       {plan.validation_errors.length > 0 && (
         <p className="text-xs text-muted">
-          <ShieldCheck size={14} className="mr-1 inline text-duo-green" /> {plan.validation_errors.length} new exercise(s) didn&apos;t pass Duo&apos;s quality check and were replaced before reaching you.
+          <ShieldCheck size={14} className="mr-1 inline text-duo-green" /> {plan.validation_errors.length} new exercise(s) didn&apos;t pass Smarto&apos;s quality check and were replaced before reaching you.
         </p>
       )}
       {plan.status === "ready" && (
@@ -549,7 +549,7 @@ function LearnerModel({ data }: { data: Brain }) {
     <section className="card p-5">
       <button className="flex w-full items-center justify-between text-left" onClick={() => setOpen((o) => !o)}>
         <div>
-          <h3 className="text-lg font-extrabold text-ink">Everything Duo tracks about you</h3>
+          <h3 className="text-lg font-extrabold text-ink">Everything Smarto tracks about you</h3>
           <p className="text-sm text-muted">A score for each topic, updated after every answer.</p>
         </div>
         <span className="text-faint">{open ? "▲" : "▼"}</span>

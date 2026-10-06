@@ -51,7 +51,8 @@ def create_guest(db: Session, name: str | None = None) -> User:
     )
     db.add(user)
     db.flush()
-    _seed_history(db, user, course, rng)
+    # Fixed seed: every demo learner gets the same mistake pattern, so the first diagnosis is consistent.
+    _seed_history(db, user, course, random.Random(2024))
     achievements.check_and_unlock(db, user)
     db.flush()
     return user

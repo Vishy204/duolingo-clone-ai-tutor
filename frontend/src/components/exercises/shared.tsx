@@ -4,7 +4,7 @@ import Mascot from "../Mascot";
 import { Speaker } from "../ui/Icons";
 import { speak } from "@/lib/sound";
 
-/** Duo with a speech bubble holding the source sentence (translate / type exercises). */
+/** Smarto with a speech bubble holding the source sentence (translate / type exercises). */
 export function SpeechBubble({ text, lang }: { text: string; lang: "es" | "en" }) {
   const isSpanish = lang === "es";
   return (

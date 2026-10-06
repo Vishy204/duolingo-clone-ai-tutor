@@ -36,7 +36,7 @@ export function useLearnerEffects() {
   useEffect(() => {
     const id = insights?.ready_plan?.id ?? null;
     if (id && lastPlan.current !== null && id !== lastPlan.current) {
-      toast({ title: "Duo built you a new practice!", body: insights?.ready_plan?.summary || "", icon: <Sparkles className="text-duo-purple" />, tone: "purple" });
+      toast({ title: "Smarto built you a new practice!", body: insights?.ready_plan?.summary || "", icon: <Sparkles className="text-duo-purple" />, tone: "purple" });
       invalidate();
     }
     if (id) lastPlan.current = id;

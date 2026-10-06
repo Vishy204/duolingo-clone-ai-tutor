@@ -65,12 +65,12 @@ export default function FeedbackSheet({
                 {result.feedback && <div className="mt-1 text-[15px] opacity-90">{result.feedback}</div>}
                 {!correct && !ex && (
                   <button onClick={askDuo} className="mt-2 flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-duo-purple">
-                    <Sparkle size={16} /> Why? Ask Duo
+                    <Sparkle size={16} /> Why? Ask Smarto
                   </button>
                 )}
                 {ex && (
                   <div className="mt-2 max-w-xl rounded-xl bg-surface p-3 text-[15px] text-ink">
-                    {ex.loading && <span className="animate-pulse text-muted">Duo is looking at your answer…</span>}
+                    {ex.loading && <span className="animate-pulse text-muted">Smarto is looking at your answer…</span>}
                     {ex.error && <span className="text-muted">{ex.error}</span>}
                     {ex.data && (
                       <>

@@ -78,7 +78,7 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <h2 className="mb-3 mt-8 text-2xl font-extrabold text-ink">What Duo knows about you</h2>
+      <h2 className="mb-3 mt-8 text-2xl font-extrabold text-ink">What Smarto knows about you</h2>
       <div className="card space-y-3 p-5">
         {mastery.map((m) => (
           <div key={m.concept_key}>

@@ -3,7 +3,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, post } from "@/lib/api";
-import { keys } from "@/lib/hooks";
+import Link from "next/link";
+import { keys, useInsights } from "@/lib/hooks";
 import type { ChatMessage } from "@/lib/types";
 import Mascot from "../Mascot";
 import { Mic } from "lucide-react";
@@ -21,6 +22,8 @@ export default function ChatPanel() {
   const [pending, setPending] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [practiceAsked, setPracticeAsked] = useState(false);
+  const { data: insights } = useInsights();
   const bottom = useRef<HTMLDivElement>(null);
   const messages = (data?.messages || []).filter((m) => m.channel !== "voice" || true);
 
@@ -35,8 +38,12 @@ export default function ChatPanel() {
     setErr(null);
     setPending(msg);
     try {
-      const r = await post<{ reply: string; practice_requested: string[] }>("/tutor/chat", { message: msg });
-      if (r.practice_requested?.length) qc.invalidateQueries({ queryKey: keys.insights });
+      const r = await post<{ reply: string; practice_requested: boolean }>("/tutor/chat", { message: msg });
+      if (r.practice_requested) {
+        setPracticeAsked(true);
+        // The run starts in the background; poll insights so the card below flips to "ready".
+        setTimeout(() => qc.invalidateQueries({ queryKey: keys.insights }), 800);
+      }
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -51,7 +58,7 @@ export default function ChatPanel() {
       <div className="flex items-center gap-3 border-b-2 border-line px-5 py-3">
         <Mascot size={44} animate={false} />
         <div>
-          <div className="font-extrabold text-ink">Chat with Duo</div>
+          <div className="font-extrabold text-ink">Chat with Smarto</div>
           <div className="text-xs text-muted">Check a phrase, ask about grammar, or ask for practice</div>
         </div>
       </div>
@@ -66,11 +73,24 @@ export default function ChatPanel() {
           <>
             <Bubble m={{ role: "user", content: pending }} />
             <div className="flex items-center gap-2 text-sm text-muted">
-              <Mascot size={28} mood="think" /> <span className="animate-pulse">Duo is thinking…</span>
+              <Mascot size={28} mood="think" /> <span className="animate-pulse">Smarto is thinking…</span>
             </div>
           </>
         )}
         {err && <div className="text-sm text-duo-red">{err}</div>}
+        {practiceAsked && (
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-duo-purple p-3 text-sm">
+            <Mascot size={36} animate={!!insights?.running} mood={insights?.running ? "think" : "happy"} />
+            <div className="flex-1 text-ink">
+              {insights?.running ? "Building your practice…" : insights?.ready_plan ? "Your practice is ready." : "Preparing your practice…"}
+            </div>
+            {!insights?.running && insights?.ready_plan && (
+              <Link href="/practice?mode=personalized" className="btn btn-purple h-10 px-4 text-[13px]">
+                Start ({insights.ready_plan.exercise_count})
+              </Link>
+            )}
+          </div>
+        )}
         <div ref={bottom} />
       </div>
       <div className="flex flex-wrap gap-2 px-5 pb-2">
@@ -91,7 +111,7 @@ export default function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           maxLength={500}
-          placeholder="Ask Duo…"
+          placeholder="Ask Smarto…"
           className="flex-1 rounded-xl border-2 border-line bg-surface-2 px-4 text-ink outline-none focus:border-duo-blue-border"
         />
         <button className="btn btn-blue h-11" disabled={!input.trim() || !!pending}>Send</button>

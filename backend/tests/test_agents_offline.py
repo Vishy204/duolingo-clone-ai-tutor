@@ -70,3 +70,21 @@ def test_demo_learner_history_points_at_gender(db):
     diagnosis = fallback.diagnose(db, user)
     assert "grammar.gender_articles" in [w["concept_key"] for w in diagnosis["weak_concepts"]]
     db.rollback()
+
+
+def test_explicit_request_overrides_planner_focus():
+    """'Practise animals' must produce an animals session even if the planner preferred other topics."""
+    from app.agents.pipeline import _sanitize_plan
+    from app.agents.schemas import LearnerDiagnosis, PlanItem, PracticePlan
+
+    planned = PracticePlan(
+        items=[PlanItem(concept_key="grammar.gender_articles", exercise_count=4,
+                        exercise_types=["fill_blank"], difficulty=2, reason="weakest")],
+        review_concepts=["spelling.accents"], strategy="s", learner_message="Smarto: hi",
+    )
+    diagnosis = LearnerDiagnosis(weak_concepts=[], strengths=[], error_patterns=[], overall_summary="", confidence=0.5)
+    known = {"grammar.gender_articles", "vocab.animals", "spelling.accents"}
+    plan = _sanitize_plan(planned, known, diagnosis, requested=["vocab.animals"])
+    assert [i.concept_key for i in plan.items] == ["vocab.animals"]
+    assert plan.review_concepts == []
+    assert plan.learner_message == "hi"

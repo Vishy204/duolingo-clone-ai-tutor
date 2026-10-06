@@ -110,7 +110,7 @@ async def voice_ws(websocket: WebSocket, ticket: str = ""):
         except Exception:  # noqa: BLE001
             pass
     with SessionLocal() as db:
-        run = AgentRun(user_id=user_id, kind="voice", agent_name="Voice Duo", status="running",
+        run = AgentRun(user_id=user_id, kind="voice", agent_name="Voice Smarto", status="running",
                        model=f"{cfg.llm_provider}/{cfg.llm_model}", input_summary="voice session", tool_calls=[])
         db.add(run)
         db.commit()

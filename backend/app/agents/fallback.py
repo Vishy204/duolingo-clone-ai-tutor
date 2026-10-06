@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.agents import learner_data
 from app.models import Concept, Exercise, User
-from app.services import progress
 from app.services.exercise_types import PRODUCTION_TYPES, RECOGNITION_TYPES
 
 FRIENDLY = {
@@ -59,12 +58,13 @@ def diagnose(db: Session, user: User) -> dict:
 def plan_and_pick(db: Session, user: User, diagnosis: dict, focus_hint: list[str] | None = None,
                   size: int = 8) -> tuple[dict, list[int], str]:
     weak = diagnosis["weak_concepts"]
-    focus = list(dict.fromkeys((focus_hint or []) + [w["concept_key"] for w in weak]))[:2]
+    # An explicit request is the whole session; otherwise the two weakest concepts.
+    focus = list(dict.fromkeys(focus_hint))[:3] if focus_hint else [w["concept_key"] for w in weak][:2]
     if not focus:
         focus = [m["concept_key"] for m in learner_data.concept_mastery(db, user)[:2]]
     modes = {w["concept_key"]: w["weakness_mode"] for w in weak}
 
-    lesson_ids = progress.studied_lesson_ids(db, user)
+    lesson_ids = learner_data.available_lesson_ids(db, user, focus_hint)
     concept_ids = {c.id: c.key for c in db.scalars(select(Concept).where(Concept.key.in_(focus)))}
     pool = db.scalars(select(Exercise).where(Exercise.lesson_id.in_(lesson_ids))).all()
     targeted = [e for e in pool if any(c.id in concept_ids for c in e.concepts)]
@@ -83,7 +83,8 @@ def plan_and_pick(db: Session, user: User, diagnosis: dict, focus_hint: list[str
     chosen = targeted[:size]
     chosen.sort(key=lambda e: e.difficulty)
     names = " and ".join(FRIENDLY.get(k, k.split(".")[-1].replace("_", " ")) for k in focus)
-    message = f"I noticed {names} trip you up, so I picked {len(chosen)} exercises to strengthen them!"
+    message = (f"Here's your practice on {names}: {len(chosen)} exercises." if focus_hint
+               else f"I noticed {names} trip you up, so I picked {len(chosen)} exercises to strengthen them!")
     plan = {
         "items": [
             {"concept_key": k, "exercise_count": sum(1 for e in chosen if any(c.key == k for c in e.concepts)),
@@ -99,11 +100,11 @@ def plan_and_pick(db: Session, user: User, diagnosis: dict, focus_hint: list[str
 
 
 def seeded_fill(db: Session, user: User, concept_keys: list[str], exclude: set[int], n: int,
-                prefer_types: set[str] | None = None) -> list[int]:
+                prefer_types: set[str] | None = None, requested: list[str] | None = None) -> list[int]:
     """Seeded exercises for the given concepts (used to top up an agent plan)."""
     if n <= 0:
         return []
-    lesson_ids = progress.studied_lesson_ids(db, user)
+    lesson_ids = learner_data.available_lesson_ids(db, user, requested)
     pool = db.scalars(select(Exercise).where(Exercise.lesson_id.in_(lesson_ids))).all()
     keys = set(concept_keys)
     targeted = [e for e in pool if e.id not in exclude and any(c.key in keys for c in e.concepts)]
