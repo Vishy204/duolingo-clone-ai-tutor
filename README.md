@@ -39,9 +39,11 @@ you to look at most closely.
    you can check the diagnosis matches what you picked. Or play a lesson and get things wrong on purpose.
 5. **Custom Practice** (sidebar): pick up to 3 topics and press *Build practice*. Smarto builds it in
    ~30s, a notification pops up when it's ready (and a browser notification if you allowed it), and it
-   stays in the tab so you can start it, or practise it again, any time.
+   stays in the tab so you can start it, or practise it again, any time. Custom practice never costs
+   hearts, and topics you haven't reached in the course work too.
 6. **Smarto → Talk to Smarto**: ask in text or by voice, e.g. *"Is hola amigo correct?"*, or *"make me a
-   practice on animals"*. Smarto builds it and tells you to check the Custom Practice tab once it's ready.
+   practice on animal names"*. Smarto builds a practice on exactly the topics you named (nothing extra)
+   and tells you to check the Custom Practice tab once it's ready.
 
 ---
 
@@ -101,7 +103,8 @@ flowchart LR
   tool (chat and voice) start the same pipeline with your topics. An explicit request is never dropped
   (it waits behind a running update), the topics you asked for override the planner, and they may use
   course lessons you haven't reached yet. Custom practices are their own family: they stay in the tab
-  and are never replaced by the automatic plan behind the path's Smarto's Practice node.
+  and are never replaced by the automatic plan behind the path's Smarto's Practice node. A requested
+  topic gets ~8 exercises in mixed formats; course top-ups stay on topic and never repeat a sentence.
 - **Always adapts.** No API key, budget used up, or an exception: a rules engine produces the same
   outputs with zero LLM calls.
 - **Observable.** Every agent call is stored in `agent_runs` (status, latency, tokens, tool calls,
@@ -125,7 +128,10 @@ mic -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras L
 ```
 
 Everything streams, and the learner's weak topics are pre-loaded into the prompt instead of fetched
-with a tool, so Smarto answers in about 2–4s end to end on the hosted server. Slow work is handed off:
+with a tool, so Smarto answers in about 2–4s end to end on the hosted server. Start-up is tuned too:
+the greeting is spoken straight to text-to-speech (no LLM call), the browser preloads the voice client,
+the server warms the voice stack at boot, and a scheduled ping keeps the free instance from sleeping.
+Slow work is handed off:
 `create_practice` schedules the agent pipeline in the background. It uses WebSocket instead of WebRTC
 because PaaS hosts don't route WebRTC's UDP. The browser exchanges its token for a single-use 60s
 ticket, so no long-lived token ends up in a URL.
@@ -225,7 +231,7 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements-dev.txt
 cp .env.example .env        # OPENAI_API_KEY for agents; DEEPGRAM_API_KEY + CEREBRAS_API_KEY for voice
 uvicorn app.main:app --port 8000                    # seeds the database on first start
-pytest -q                                           # 35 tests
+pytest -q                                           # 36 tests
 
 # Frontend (Node 20.9+)
 cd ../frontend
