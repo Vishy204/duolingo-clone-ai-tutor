@@ -9,12 +9,11 @@ with low reasoning effort, the learner's profile pre-loaded into the prompt inst
 tool call, and only cheap in-process tools. Heavy work (building a practice session) is handed to
 the agent pipeline in the background so the voice never waits on it.
 """
-import json
 
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -50,18 +49,19 @@ How you talk (this is read aloud):
 - Gender/agreement matters: e.g. "hola amigo" is right for a male friend, "hola amiga" for a female.
 - If the speech transcript looks garbled, guess the most likely Spanish phrase and confirm it.
 - Encourage them, and mention their weak spots below only when relevant.
-- If they want to practise something, call create_practice, then tell them to check the Custom Practice
-  tab once it's ready (they'll get a notification). For streak/XP questions call get_my_stats.
+- If they want to practise something, call create_practice with ONLY the topics they named (never add
+  their weak spots yourself), then tell them to check the Custom Practice tab once it's ready (they'll
+  get a notification). For streak/XP questions call get_my_stats.
 - Only help with language learning and this app.
 
 What you know about this learner right now:
 {profile}
 """
 
-GREETING = (
-    "Say hello to the learner by name in ENGLISH, in one short friendly sentence, and invite them to say a "
-    "Spanish phrase they want checked. Do not give a verdict yet."
-)
+def greeting(name: str) -> str:
+    """Spoken straight to text-to-speech the moment the pipeline starts: no LLM round-trip, so the
+    learner hears Smarto almost immediately after tapping the mic."""
+    return f"Hi {name or 'there'}! Say a Spanish phrase and I'll tell you if it's right."
 
 
 def learner_profile(user_id: int) -> tuple[str, str]:
@@ -169,7 +169,6 @@ def build_worker(transport: BaseTransport, cfg: VoiceConfig, user_id: int) -> Pi
 
     @worker.event_handler("on_pipeline_started")
     async def on_pipeline_started(worker, frame):
-        context.add_message({"role": "developer", "content": f"{GREETING} Their name is {json.dumps(name)}."})
-        await worker.queue_frames([LLMRunFrame()])
+        await worker.queue_frames([TTSSpeakFrame(greeting(name), append_to_context=True)])
 
     return worker

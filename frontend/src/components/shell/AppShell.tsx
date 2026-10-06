@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useInsights, useInvalidateLearner, useMe } from "@/lib/hooks";
 import { setSoundEnabled } from "@/lib/sound";
@@ -16,6 +17,7 @@ export function useLearnerEffects() {
   const toast = useToast();
   const invalidate = useInvalidateLearner();
   const lastPlan = useRef<number | null>(null);
+  const pathname = usePathname();
   // undefined = not loaded yet, so a practice that was already ready on page load doesn't notify.
   const lastCustom = useRef<{ id: number; status: string } | null | undefined>(undefined);
 
@@ -52,6 +54,9 @@ export function useLearnerEffects() {
     lastCustom.current = now;
     if (prev === undefined || !now || now.status !== "ready") return;
     if (prev && prev.id === now.id && prev.status === "ready") return;
+    invalidate();
+    notifyBrowser("Your custom practice is ready", custom?.summary || "Open Smartalingo to start it.");
+    if (pathname === "/custom") return; // the card on this page already flips to Ready
     toast({
       title: "Your custom practice is ready",
       body: custom?.summary || "Open the Custom Practice tab to start it.",
@@ -59,9 +64,7 @@ export function useLearnerEffects() {
       tone: "purple",
       action: { label: "Open", href: "/custom" },
     });
-    notifyBrowser("Your custom practice is ready", custom?.summary || "Open Smartalingo to start it.");
-    invalidate();
-  }, [insights, custom, toast, invalidate]);
+  }, [insights, custom, toast, invalidate, pathname]);
 }
 
 /** A system notification too, if the learner allowed it and is looking at another tab or app. */

@@ -23,6 +23,19 @@ from app.services.exercise_types import PRODUCTION_TYPES, public_payload, speaka
 from app.services.grading import grade
 
 HEART_MODES = {"lesson", "personalized"}
+
+
+def _is_custom_session(db: Session, session: LessonSession) -> bool:
+    """A practice the learner asked for (Custom Practice tab, chat, voice)."""
+    if session.mode != "personalized" or not session.plan_id:
+        return False
+    plan = db.get(AdaptivePlan, session.plan_id)
+    return plan is not None and plans.is_custom(plan)
+
+
+def uses_hearts(db: Session, session: LessonSession) -> bool:
+    # Practice the learner chose is like Duolingo's practice mode: it never costs hearts.
+    return session.mode in HEART_MODES and not _is_custom_session(db, session)
 MAX_REQUEUE = 2
 LEGENDARY_MAX_MISTAKES = 3
 XP_BY_MODE = {"lesson": 10, "practice": 10, "personalized": 15, "legendary": 40}
@@ -73,7 +86,7 @@ def start_session(
             plan = plans.latest_ready_plan(db, user.id)
         if plan is None:
             raise GameError("no_plan", "Smarto is still preparing your personalized practice.", 409)
-        if user.hearts <= 0:
+        if user.hearts <= 0 and not plans.is_custom(plan):
             raise GameError("no_hearts", "You ran out of hearts!", 409)
         queue = [e.id for e in plans.plan_exercises(db, plan)]
         plan_id = plan.id
@@ -177,7 +190,8 @@ def session_view(db: Session, session: LessonSession, user: User) -> dict:
         "exercises": [exercise_view(by_id[i]) for i in session.queue if i in by_id],
         "answered": session.answered,
         "hearts": user.hearts,
-        "uses_hearts": session.mode in HEART_MODES,
+        "uses_hearts": uses_hearts(db, session),
+        "custom": _is_custom_session(db, session),
         "max_mistakes": LEGENDARY_MAX_MISTAKES if session.mode == "legendary" else None,
         "time_limit_seconds": 150 if session.mode == "legendary" else None,
     }
@@ -203,8 +217,8 @@ def submit_answer(
         raise GameError("out_of_order", "That isn't the current exercise.", 409)
 
     hearts.regenerate(user)
-    uses_hearts = session.mode in HEART_MODES
-    if uses_hearts and user.hearts <= 0:
+    hearts_on = uses_hearts(db, session)
+    if hearts_on and user.hearts <= 0:
         raise GameError("no_hearts", "You ran out of hearts!", 409)
 
     ex = db.get(Exercise, exercise_id)
@@ -221,7 +235,7 @@ def submit_answer(
     mastery.update_for_attempt(db, user, ex, result.correct, result.typo)
 
     # Match-pairs mistakes are part of the game itself: logged for the tutor, never punished.
-    counts_as_correct = result.correct or ex.type == "match_pairs"
+    counts_as_correct = result.correct or (ex.type == "match_pairs" and not answer.get("skipped"))
     requeued = False
     failed = False
     if counts_as_correct:
@@ -231,7 +245,7 @@ def submit_answer(
     else:
         session.mistake_count += 1
         session.combo = 0
-        if uses_hearts:
+        if hearts_on:
             hearts.lose_heart(user)
             session.hearts_lost += 1
         if session.mode == "legendary":
@@ -254,7 +268,7 @@ def submit_answer(
         "correct_answer": result.correct_answer,
         "requeued": requeued,
         "hearts": user.hearts,
-        "out_of_hearts": uses_hearts and user.hearts <= 0,
+        "out_of_hearts": hearts_on and user.hearts <= 0,
         "failed": failed,
         "combo": session.combo,
         "remaining": len(session.queue) - session.answered,

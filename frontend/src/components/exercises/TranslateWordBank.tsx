@@ -36,7 +36,7 @@ export default function TranslateWordBank({ data, disabled, onChange }: Exercise
             onChange(e.target.value.trim() ? { text: e.target.value } : null);
           }}
           placeholder={`Type in ${data.target_lang === "es" ? "Spanish" : "English"}`}
-          className="mt-2 h-36 w-full resize-none rounded-2xl border-2 border-line bg-surface-2 p-4 text-lg text-ink outline-none focus:border-duo-blue-border"
+          className="mt-2 h-36 w-full resize-none rounded-2xl border-2 border-line bg-surface-2 p-4 text-lg text-ink outline-none focus:border-brand-border"
         />
       ) : (
         <LayoutGroup>

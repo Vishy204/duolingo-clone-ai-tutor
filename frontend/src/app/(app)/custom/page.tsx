@@ -184,7 +184,11 @@ function PracticeCard({ plan, names }: { plan: PlanView; names: Record<string, s
         </div>
         <div className="mt-1 text-[16px] font-extrabold text-ink">{topics || "Your weakest topics"}</div>
         <div className="text-sm text-muted">
-          {pending ? "Smarto is writing your exercises. This takes about 30 seconds." : plan.status === "failed" ? plan.error || "This one didn't work. Try building it again." : plan.summary}
+          {pending
+            ? "Smarto is writing your exercises. This takes about 30 seconds."
+            : plan.status === "failed"
+              ? "This one didn't work. Pick the topics again to rebuild it."
+              : contents(plan)}
         </div>
       </div>
       {plan.status === "ready" && (
@@ -199,6 +203,13 @@ function PracticeCard({ plan, names }: { plan: PlanView; names: Record<string, s
       )}
     </div>
   );
+}
+
+function contents(plan: PlanView): string {
+  const parts = [];
+  if (plan.generated_count) parts.push(`${plan.generated_count} written for you by Smarto`);
+  if (plan.seeded_count) parts.push(`${plan.seeded_count} from the course`);
+  return parts.length ? parts.join(", ") : plan.summary || "";
 }
 
 function StatusChip({ status }: { status: string }) {

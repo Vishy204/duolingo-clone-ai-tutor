@@ -140,6 +140,9 @@ def best_match(user: str, accepted: list[str]) -> GradeResult:
 def grade(ex_type: str, payload: dict, answer: dict) -> GradeResult:
     correct_answer = display_answer(ex_type, payload)
 
+    if answer.get("skipped"):  # "Skip" is wrong, but not a misconception: no error type, no misleading hint
+        return GradeResult(False, correct_answer=correct_answer)
+
     if ex_type == "multiple_choice":
         choice = answer.get("choice")
         ok = isinstance(choice, int) and choice == payload["answer"]

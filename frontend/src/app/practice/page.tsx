@@ -16,7 +16,7 @@ function Practice() {
       post<SessionData>("/sessions", { mode, skill_id: skill ? Number(skill) : null, plan_id: plan ? Number(plan) : null }),
     [mode, skill, plan],
   );
-  return <LessonPlayer key={`${mode}-${skill}-${plan}`} start={start} />;
+  return <LessonPlayer key={`${mode}-${skill}-${plan}`} start={start} exitTo={plan ? "/custom" : "/learn"} />;
 }
 
 export default function PracticePage() {

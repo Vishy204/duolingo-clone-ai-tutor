@@ -30,7 +30,7 @@ class AnswerIn(BaseModel):
     @field_validator("answer")
     @classmethod
     def small_answer(cls, v: dict) -> dict:
-        allowed = {"choice", "text", "tokens", "mistakes"}
+        allowed = {"choice", "text", "tokens", "mistakes", "skipped"}
         v = {k: v[k] for k in v if k in allowed}
         if isinstance(v.get("text"), str):
             v["text"] = v["text"][:200]
@@ -38,6 +38,8 @@ class AnswerIn(BaseModel):
             v["tokens"] = [str(t)[:40] for t in v["tokens"][:30]]
         if isinstance(v.get("choice"), str):
             v["choice"] = v["choice"][:60]
+        if "skipped" in v:
+            v["skipped"] = v["skipped"] is True
         if "mistakes" in v:
             try:
                 v["mistakes"] = max(0, min(int(v["mistakes"]), 50))

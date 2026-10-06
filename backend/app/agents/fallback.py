@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.agents import learner_data
 from app.models import Concept, Exercise, User
-from app.services.exercise_types import PRODUCTION_TYPES, RECOGNITION_TYPES
+from app.services.exercise_types import PRODUCTION_TYPES, RECOGNITION_TYPES, display_answer
+from app.services.grading import normalize
 
 FRIENDLY = {
     "grammar.gender_articles": "el/la and un/una",
@@ -111,4 +112,27 @@ def seeded_fill(db: Session, user: User, concept_keys: list[str], exclude: set[i
     random.shuffle(targeted)
     if prefer_types:
         targeted.sort(key=lambda e: e.type not in prefer_types)
-    return [e.id for e in targeted[:n]]
+    if requested:  # stay on topic: exercises mostly about the requested concepts, short ones first
+        want = set(requested)
+        targeted.sort(key=lambda e: (sum(c.key not in want for c in e.concepts), min(map(len, _texts(e)))))
+    # Never show the same sentence twice in one session, in either direction (es->en and en->es),
+    # including the AI-written ones already chosen (`exclude`).
+    seen: set[str] = set()
+    for e in db.scalars(select(Exercise).where(Exercise.id.in_(exclude))).all() if exclude else []:
+        seen |= _texts(e)
+    out = []
+    for e in targeted:
+        if len(out) >= n:
+            break
+        if _texts(e) & seen:
+            continue
+        seen |= _texts(e)
+        out.append(e.id)
+    return out
+
+
+def _texts(e: Exercise) -> set[str]:
+    """The prompt and the answer of an exercise, normalised, for duplicate detection."""
+    p = e.payload
+    prompt = p.get("source") or p.get("sentence") or p.get("question") or ""
+    return {t for t in (normalize(prompt), normalize(display_answer(e.type, p))) if t}

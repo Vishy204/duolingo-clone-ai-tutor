@@ -35,7 +35,12 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
 
   useEffect(() => {
     api<Status>("/voice/status").then(setStatus).catch(() => setStatus({ enabled: false }));
+    // Download the voice client while the page is idle, so tapping the mic doesn't wait for it.
+    const warm = () => void Promise.all([import("@pipecat-ai/client-js"), import("@pipecat-ai/websocket-transport")]);
+    const idle = typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(warm) : window.setTimeout(warm, 1500);
     return () => {
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
       void client.current?.disconnect();
     };
   }, []);
@@ -112,8 +117,8 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
   const live = state !== "idle" && state !== "error";
   const label = {
     idle: "Tap to talk",
-    connecting: "Connecting…",
-    listening: "Listening",
+    connecting: "Starting…",
+    listening: "Go ahead, I'm listening",
     you: "Hearing you…",
     duo: "Smarto is speaking",
     error: "Couldn't connect",
@@ -127,10 +132,16 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
       </div>
       <button
         onClick={live ? stop : startCall}
-        className={`grid h-20 w-20 place-items-center rounded-full ${live ? "bg-duo-red" : "bg-brand"} shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1`}
+        className={`relative grid h-20 w-20 place-items-center rounded-full ${state === "connecting" || state === "listening" ? "ring-8 ring-brand/25" : ""} ${state === "connecting" ? "animate-pulse" : ""} ${live && state !== "connecting" ? "bg-duo-red" : "bg-brand"} shadow-[0_6px_0_rgba(0,0,0,0.2)] transition-transform active:translate-y-1`}
         aria-label={live ? "End voice chat" : "Start voice chat"}
       >
-        {live ? <span className="h-6 w-6 rounded-md bg-white" /> : <Mic size={36} />}
+        {state === "connecting" ? (
+          <span className="h-8 w-8 animate-spin rounded-full border-4 border-white/40 border-t-white" />
+        ) : live ? (
+          <span className="h-6 w-6 rounded-md bg-white" />
+        ) : (
+          <Mic size={36} />
+        )}
       </button>
       <div className="text-sm font-extrabold uppercase tracking-wide text-muted">{label}</div>
       {err && (

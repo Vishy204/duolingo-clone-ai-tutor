@@ -29,7 +29,7 @@ export default function TypeAnswer({ data, disabled, onChange }: ExerciseProps<{
           if (e.key === "Enter") e.preventDefault(); // Enter is "Check" (handled by the player)
         }}
         placeholder={`Type in ${toSpanish ? "Spanish" : "English"}`}
-        className="mt-2 h-36 w-full resize-none rounded-2xl border-2 border-line bg-surface-2 p-4 text-lg text-ink outline-none focus:border-duo-blue-border"
+        className="mt-2 h-36 w-full resize-none rounded-2xl border-2 border-line bg-surface-2 p-4 text-lg text-ink outline-none focus:border-brand-border"
         spellCheck={false}
         autoCapitalize="off"
         autoComplete="off"

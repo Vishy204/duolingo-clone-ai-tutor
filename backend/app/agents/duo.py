@@ -86,8 +86,8 @@ async def create_practice(ctx: RunContextWrapper[TutorContext], concept_keys: li
     """Build a new personalized practice session focused on these concepts. It is generated in the
     background by the tutor pipeline and appears in the learner's Custom Practice tab.
 
-    Call it whenever the learner asks for practice on anything, as often as they ask. Use [] for
-    "my weakest topics".
+    Call it whenever the learner asks for practice, as often as they ask. Pass only the topics the
+    learner named (never add their weak spots yourself). Use [] only for "my weakest topics".
 
     Args:
         concept_keys: 1-4 of: vocab.basics, vocab.food, vocab.people, vocab.animals, vocab.family,

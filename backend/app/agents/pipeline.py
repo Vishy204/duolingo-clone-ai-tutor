@@ -54,6 +54,7 @@ def is_running(user_id: int) -> bool:
 
 
 ON_DEMAND_TRIGGERS = ("custom", "chat", "voice", "manual")
+REQUEST_FORMATS = ["multiple_choice", "match_pairs", "translate", "type_answer"]
 
 
 async def run_pipeline(user_id: int, trigger: str, focus_hint: list[str] | None = None,
@@ -163,18 +164,21 @@ def _sanitize_plan(plan: PracticePlan, known: set[str], diagnosis: LearnerDiagno
     """Deterministic guard-rails on the planner's output (bounds + pedagogy invariants)."""
     modes = {w.concept_key: w.weakness_mode for w in diagnosis.weak_concepts}
     items = [i for i in plan.items if i.concept_key in known][:4]
+    cap = 4
     if requested:  # the learner asked for these topics: the session is about them, nothing else
         items = [i for i in items if i.concept_key in requested]
         for key in requested:
             if all(i.concept_key != key for i in items):
-                items.append(PlanItem(
-                    concept_key=key, exercise_count=max(2, 8 // len(requested)), difficulty=1,
-                    exercise_types=["multiple_choice", "match_pairs", "translate", "type_answer"],
-                    reason="You asked to practise this.",
-                ))
+                items.append(PlanItem(concept_key=key, exercise_count=0, difficulty=1, exercise_types=[],
+                                      reason="You asked to practise this."))
+        # A full session (~8 items) split across the requested topics, in a mix of formats.
+        per_topic, cap = -(-8 // len(requested)), 8
+        for i in items:
+            i.exercise_count = max(i.exercise_count, per_topic)
+            i.exercise_types = list(dict.fromkeys(i.exercise_types + REQUEST_FORMATS))
         plan.review_concepts = []
     for i in items:
-        i.exercise_count = max(1, min(4, i.exercise_count))
+        i.exercise_count = max(1, min(cap, i.exercise_count))
         i.difficulty = max(1, min(3, i.difficulty))
         i.exercise_types = i.exercise_types or ["multiple_choice", "translate"]
         # Invariant: a production weakness is trained mostly by producing (one warm-up allowed).
@@ -200,7 +204,9 @@ async def _generate(ctx: TutorContext, plan: PracticePlan, known, vocab, emoji, 
     async def exercises_are_valid(_: RunContextWrapper, __, output: GeneratedSet) -> GuardrailFunctionOutput:
         ok, errs = validate_all(output.exercises, known, vocab, emoji)
         state["ok"], state["errors"] = ok, errs
-        too_many_bad = len(ok) < max(3, len(output.exercises) // 2)
+        # Trip only when most of the batch is invalid. (A fixed minimum of 3 used to reject small, correct
+        # batches, e.g. a one-topic custom practice, and silently fall back to course exercises.)
+        too_many_bad = len(ok) < max(1, -(-len(output.exercises) // 2))
         return GuardrailFunctionOutput(output_info={"valid": len(ok), "errors": errs}, tripwire_triggered=too_many_bad)
 
     request = json.dumps({"plan": [i.model_dump() for i in plan.items], "review_concepts": plan.review_concepts},

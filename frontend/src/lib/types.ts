@@ -83,6 +83,7 @@ export type SessionData = {
   answered: number;
   hearts: number;
   uses_hearts: boolean;
+  custom?: boolean;
   max_mistakes: number | null;
   time_limit_seconds: number | null;
 };

@@ -22,7 +22,8 @@ import { Award, Gem as GemIcon, HeartCrack, TriangleAlert } from "lucide-react";
 
 type Phase = "loading" | "answering" | "feedback" | "complete" | "error";
 
-export default function LessonPlayer({ start }: { start: () => Promise<SessionData> }) {
+/** `exitTo`: where quitting or finishing returns to (the path, or the Custom Practice tab). */
+export default function LessonPlayer({ start, exitTo = "/learn" }: { start: () => Promise<SessionData>; exitTo?: string }) {
   const router = useRouter();
   const toast = useToast();
   const invalidate = useInvalidateLearner();
@@ -175,7 +176,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
   const quit = async () => {
     if (session) await post(`/sessions/${session.id}/quit`).catch(() => {});
     invalidate();
-    router.push("/learn");
+    router.push(exitTo);
   };
 
   const refill = async () => {
@@ -194,12 +195,22 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
   };
 
   if (phase === "complete" && summary) {
-    return <LessonComplete summary={summary} onDone={() => router.push("/learn")} />;
+    return <LessonComplete summary={summary} onDone={() => router.push(exitTo)} />;
   }
 
   const legendary = session?.mode === "legendary";
   const modeLabel =
-    session?.mode === "personalized" ? "Smarto's personalized practice" : session?.mode === "practice" ? "Practice" : legendary ? "Legendary" : null;
+    session?.mode === "personalized"
+      ? session.custom
+        ? "Custom practice"
+        : "Smarto's practice"
+      : session?.mode === "practice"
+        ? "Practice"
+        : legendary
+          ? "Legendary"
+          : null;
+  // Inside a normal lesson, mark the exercises Smarto mixed in; in practice modes the header says it all.
+  const pickLabel = session?.mode === "lesson" && current?.personalized ? "Smarto's pick for you" : null;
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -256,15 +267,17 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
           <div className="flex flex-col items-center gap-5 text-center">
             <Mascot mood="sad" size={140} />
             <p className="text-lg text-ink">{error}</p>
-            <button className="btn btn-blue w-56" onClick={() => router.push("/learn")}>Back to path</button>
+            <button className="btn btn-brand w-56" onClick={() => router.push(exitTo)}>
+              {exitTo === "/custom" ? "Back to Custom Practice" : "Back to path"}
+            </button>
           </div>
         )}
         {current && (phase === "answering" || phase === "feedback") && (
           <AnimatePresence mode="wait">
             <motion.div key={`${current.id}-${index}`} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
-              {(current.personalized || modeLabel) && (
+              {(pickLabel || modeLabel) && (
                 <div className="mb-3 flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-duo-purple">
-                  <Sparkle size={16} /> {current.personalized ? "Smarto's pick for you" : modeLabel}
+                  <Sparkle size={16} /> {pickLabel || modeLabel}
                 </div>
               )}
               <ExerciseView
@@ -288,7 +301,7 @@ export default function LessonPlayer({ start }: { start: () => Promise<SessionDa
           result={result}
           onCheck={() => void check()}
           onContinue={next}
-          onSkip={() => void check({ text: "" , tokens: [], choice: -1, mistakes: 1 })}
+          onSkip={() => void check({ text: "", tokens: [], choice: -1, mistakes: 1, skipped: true })}
         />
       )}
 
