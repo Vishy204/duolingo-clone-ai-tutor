@@ -60,7 +60,7 @@ so I would ask you to look at that part closely. It is documented in [Adaptive t
 | Frontend | Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS v4, TanStack Query, Motion, lucide-react |
 | Backend | Python 3.13, FastAPI, SQLAlchemy 2, Pydantic v2, PyJWT |
 | Database | SQLite (WAL mode) |
-| AI | OpenAI Agents SDK (`gpt-5-mini`), Pipecat for voice (Deepgram speech-to-text and text-to-speech, Cerebras LLM) |
+| AI | OpenAI Agents SDK (`gpt-5-mini`), Pipecat for voice (Deepgram speech-to-text and bilingual Spanish/English text-to-speech, Cerebras LLM) |
 | Hosting | Vercel (frontend), Render with Docker (backend) |
 | Tooling | pytest, Ruff, ESLint, GitHub Actions |
 
@@ -310,12 +310,15 @@ Asking Smarto in chat or by voice ("make me a practice on animal names") creates
 ### Voice tutor
 
 ```
-microphone -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras LLM -> Deepgram TTS -> speaker
+microphone -> WebSocket -> Silero VAD -> Deepgram STT (English + Spanish) -> Cerebras LLM -> Deepgram TTS (bilingual voice) -> speaker
 ```
 
 Every stage streams, and the learner's weak topics are loaded into the prompt in advance, so answers take about
 2–4 seconds. The greeting is spoken directly without an LLM call, the voice stack is warmed at server start, and the
-learner can switch the microphone on and off during a call. WebSocket is used instead of WebRTC because the host
+learner can switch the microphone on and off during a call. Smarto speaks with a bilingual Deepgram Aura-2 voice
+(`aura-2-selena-es`, Latin American Spanish) that switches between English and Spanish mid-sentence, so Spanish
+words are pronounced natively while explanations stay in clear English. Any other voice can be set with
+`VOICE_TTS_VOICE`. WebSocket is used instead of WebRTC because the host
 does not route WebRTC's UDP traffic.
 
 ### Evaluations
