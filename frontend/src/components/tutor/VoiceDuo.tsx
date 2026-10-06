@@ -5,11 +5,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { api, voiceSocketUrl } from "@/lib/api";
 import Mascot from "../Mascot";
+import RichText from "../ui/RichText";
 import { Mic } from "../ui/Icons";
 
 type Status = { enabled: boolean; max_session_secs?: number; sessions_left_today?: number };
 type Line = { who: "you" | "duo"; text: string };
 type State = "idle" | "connecting" | "listening" | "you" | "duo" | "error";
+
+/** Stitch streamed sentences back together without a space before closing quotes or punctuation. */
+function joinSentences(parts: string[]): string {
+  return parts.reduce((acc, p) => (!acc ? p : /^[”"’'»)\].,!?;:]/.test(p) ? acc + p : `${acc} ${p}`), "");
+}
 
 function friendlyError(raw: string): string {
   if (/1006|websocket|connect/i.test(raw)) return "Couldn't connect to voice. Check your connection and try again.";
@@ -100,7 +106,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
             const text = d.text?.trim();
             if (!text || d.aggregated_by === "word" || turn.current.includes(text)) return;
             turn.current.push(text);
-            const joined = turn.current.join(" ");
+            const joined = joinSentences(turn.current);
             setLines((l) => {
               const last = l[l.length - 1];
               if (last?.who === "duo") return [...l.slice(0, -1), { who: "duo", text: joined }];
@@ -191,7 +197,7 @@ export default function VoiceDuo({ variant = "card" }: { variant?: "card" | "fab
           {lines.map((l, i) => (
             <div key={i} className={`flex ${l.who === "you" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[15px] leading-snug ${l.who === "you" ? "bg-duo-blue text-white" : "border-2 border-line text-ink"}`}>
-                {l.text}
+                {l.who === "duo" ? <RichText text={l.text} /> : l.text}
               </div>
             </div>
           ))}

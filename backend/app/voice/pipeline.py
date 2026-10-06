@@ -29,6 +29,7 @@ from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport
 from pipecat.turns.user_mute import FunctionCallUserMuteStrategy, MuteUntilFirstBotCompleteUserMuteStrategy
+from pipecat.utils.text.markdown_text_filter import MarkdownTextFilter
 
 from app.agents import learner_data
 from app.agents import pipeline as tutor_pipeline
@@ -131,7 +132,9 @@ def build_worker(transport: BaseTransport, cfg: VoiceConfig, user_id: int) -> Pi
         settings=DeepgramSTTService.Settings(model=cfg.stt_model, language=cfg.stt_language),
     )
     llm = _make_llm(cfg, SYSTEM_PROMPT.format(profile=profile))
-    tts = DeepgramTTSService(api_key=cfg.deepgram_api_key, settings=DeepgramTTSService.Settings(voice=cfg.tts_voice))
+    # If the model slips into markdown, strip it before speaking so "**" is never read aloud.
+    tts = DeepgramTTSService(api_key=cfg.deepgram_api_key, settings=DeepgramTTSService.Settings(voice=cfg.tts_voice),
+                             text_filters=[MarkdownTextFilter()])
 
     context = LLMContext(tools=[get_my_stats, create_practice])
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
